@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F1513">
+<meta name="description" content="Time your work, rate mood and energy before and after, track habits, and see what your own data says about how you work.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Self-Study Log</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* base reset */
+html{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: an instrument log. One narrow column of ruled panels, mono readouts,
+   a single spruce accent; amber appears only while the clock runs. */
+:root{
+  --bg:#F1F5F3; --panel:#FFFFFF; --ink:#14201B; --muted:#56665F; --line:#D3DDD8; --soft:#E6EDE9;
+  --accent:#1B6A54; --accent-ink:#FFFFFF; --run:#A8620C; --run-soft:#FBF1E0;
+  --good:#1F7A4D; --warn:#8A5F00; --bad:#B03A2E; --mark:#2F8F74; --mark-soft:#A9D2C5; --neg:#B5652B;
+  --h0:#E6EDE9; --h1:#BFE0D4; --h2:#86C5AF; --h3:#4BA588; --h4:#1B6A54;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1513; --panel:#171F1C; --ink:#E4ECE8; --muted:#93A39B; --line:#2B3733; --soft:#1F2925;
+  --accent:#58BE9D; --accent-ink:#0B1411; --run:#E3A548; --run-soft:#2A2315;
+  --good:#5FCB8E; --warn:#E0B24A; --bad:#EE7B6E; --mark:#58BE9D; --mark-soft:#2F5548; --neg:#E09A62;
+  --h0:#1F2925; --h1:#24493D; --h2:#2F6E5A; --h3:#43A083; --h4:#6FD8B5;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0F1513; --panel:#171F1C; --ink:#E4ECE8; --muted:#93A39B; --line:#2B3733; --soft:#1F2925;
+  --accent:#58BE9D; --accent-ink:#0B1411; --run:#E3A548; --run-soft:#2A2315;
+  --good:#5FCB8E; --warn:#E0B24A; --bad:#EE7B6E; --mark:#58BE9D; --mark-soft:#2F5548; --neg:#E09A62;
+  --h0:#1F2925; --h1:#24493D; --h2:#2F6E5A; --h3:#43A083; --h4:#6FD8B5;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:780px;margin:0 auto;padding-block:20px 56px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:18px}
+h1{font-size:1.35rem;font-weight:600;letter-spacing:-.01em;margin:0}
+h2{font-size:1.02rem;font-weight:600;margin:0;text-wrap:balance}
+h3{font-size:.74rem;font-weight:500;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:.85rem} .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.status{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.status[data-s="demo"],.status[data-s="slow"]{color:var(--warn)} .status[data-s="error"]{color:var(--bad)}
+nav{display:flex;gap:4px;box-shadow:inset 0 -1px 0 var(--line);overflow-x:auto;overflow-y:hidden}
+nav a{padding:8px 12px;text-decoration:none;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+nav a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+.view{display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.note{border-left:3px solid var(--warn);background:var(--soft);padding:10px 12px;border-radius:0 4px 4px 0;font-size:.9rem}
+.note.bad{border-left-color:var(--bad)}
+.empty{color:var(--muted);padding:6px 0}
+.empty b{color:var(--ink);font-weight:600;display:block}
+
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:4px 9px;font-size:.84rem}
+.btn.ghost{border-color:transparent;color:var(--muted);background:transparent}
+.btn.ghost:hover{color:var(--ink)}
+.btn[data-armed]{border-color:var(--bad);color:var(--bad)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* timer */
+.timer.on{border-color:var(--run);background:var(--run-soft)}
+.clock{font-family:var(--mono);font-size:2.5rem;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.timer.on .clock{color:var(--run)}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.due::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--run);margin-right:6px}
+
+/* tasks */
+.list{display:flex;flex-direction:column}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--soft)}
+.task:first-child{border-top:0}
+.task input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.task .t{font-weight:500;overflow-wrap:anywhere}
+.task.done .t{text-decoration:line-through;color:var(--muted)}
+.meta{font-size:.82rem;color:var(--muted);display:flex;gap:4px 10px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:.7rem;border:1px solid currentColor;border-radius:3px;padding:0 5px;line-height:1.5}
+.pill.bad{color:var(--bad)} .pill.warn{color:var(--warn)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:5px 10px;cursor:pointer;font-size:.86rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--soft);color:var(--ink);font-weight:500}
+
+/* habits */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;text-align:left}
+.chip .c{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip[aria-pressed="true"] .c{color:var(--accent-ink);opacity:.85}
+.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);min-width:0}
+.field input,.field select,.field textarea,.in{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:7px 9px;color:var(--ink);min-width:0;width:100%}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+
+/* rating sheet */
+#sheet{position:fixed;inset:0;background:rgba(10,16,14,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20;
+  padding:env(safe-area-inset-top,0px) 0 0}
+#sheet-body{background:var(--panel);width:min(100%,560px);max-height:92%;overflow:auto;border-radius:10px 10px 0 0;
+  padding:20px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left, 0px));
+  display:flex;flex-direction:column;gap:14px;border:1px solid var(--line);border-bottom:0}
+@media (min-width:600px){#sheet{align-items:center}#sheet-body{border-radius:10px;border-bottom:1px solid var(--line)}}
+.rate{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;min-width:0}
+.rate legend{font-weight:500;padding:0;margin-bottom:5px}
+.pts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px}
+.pts.words{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.pt{border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:8px 2px;cursor:pointer;font-family:var(--mono);font-size:.9rem}
+.pts.words .pt{font-family:var(--sans);font-size:.84rem;padding:8px 6px}
+.pt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.anc{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted)}
+
+/* insights */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px 18px}
+.tile .v{font-family:var(--mono);font-size:1.45rem;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .k{font-size:.8rem;color:var(--muted)}
+.find{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.find li{padding-left:14px;position:relative;max-width:65ch}
+.find li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.find li.warn::before{background:var(--warn)}
+svg{width:100%;height:auto;display:block}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .ax{fill:var(--muted);font-family:var(--mono);font-size:11px}
+svg .bar{fill:var(--mark)} svg .bar:hover{fill:var(--accent)}
+svg .dot{fill:var(--mark-soft);stroke:var(--panel);stroke-width:1.5}
+svg .roll{fill:none;stroke:var(--mark);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+svg .end{fill:var(--mark);stroke:var(--panel);stroke-width:2}
+svg .base{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 4}
+.key{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center}
+.key i{display:inline-block;vertical-align:middle;margin-right:5px}
+.k-dot{width:9px;height:9px;border-radius:50%;background:var(--mark-soft)}
+.k-line{width:18px;height:2px;background:var(--mark)}
+.k-dash{width:18px;height:0;border-top:1px dashed var(--muted)}
+.hb{display:grid;grid-template-columns:minmax(0,8.5rem) minmax(40px,1fr) 4.6rem 2.8rem;gap:10px;align-items:center;font-size:.9rem;padding:3px 0}
+.hb .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .tr{height:10px;background:var(--soft);border-radius:2px;position:relative;overflow:hidden}
+.hb .tr i{position:absolute;top:0;bottom:0;left:0;background:var(--mark);border-radius:0 3px 3px 0}
+.hb .tr.div::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.hb .tr.div i.neg{background:var(--neg);border-radius:3px 0 0 3px}
+.hb .v,.hb .n{font-family:var(--mono);font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums}
+.hb .n{color:var(--muted)}
+@media (max-width:480px){.hb{grid-template-columns:minmax(0,5.5rem) minmax(30px,1fr) 4.2rem 2.4rem;gap:6px}}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(3px,1fr);gap:2px}
+.strip i{height:14px;background:var(--soft);border-radius:2px}
+.strip i.y{background:var(--mark)}
+.hab{display:flex;flex-direction:column;gap:5px;padding:6px 0}
+.chip.sm{padding:3px 10px;font-size:.84rem}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:1rem repeat(7,auto);gap:3px;max-width:680px}
+.heat > *{min-width:0}
+.heat i{aspect-ratio:1;border-radius:2px;display:block}
+.heat .hl,.heat .hm{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1;align-self:center;white-space:nowrap}
+.l0{background:var(--h0)} .l1{background:var(--h1)} .l2{background:var(--h2)} .l3{background:var(--h3)} .l4{background:var(--h4)}
+.heat i.x{background:transparent;box-shadow:inset 0 0 0 1px var(--soft)}
+.heat i.f{background:transparent}
+.sws{display:inline-flex;gap:2px;align-items:center}
+.sws i{width:11px;height:11px;border-radius:2px;margin:0}
+.hb.bk{grid-template-columns:4.6rem minmax(30px,1fr) 4.8rem 5.9rem}
+.hb.bk .n,.pill{white-space:nowrap}
+@media (max-width:480px){.hb.bk{grid-template-columns:3.6rem minmax(20px,1fr) 4.2rem 5.9rem}}
+.bank{border:1px solid var(--line);border-radius:5px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg);font-size:.9rem}
+.bank:empty{display:none}
+.blocks{margin:0;padding:0;list-style:none;font-family:var(--mono);font-size:.82rem;display:flex;flex-direction:column;gap:2px}
+.calrow{display:flex;justify-content:space-between;gap:6px 14px;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--soft);font-size:.9rem}
+.tbl{width:100%;border-collapse:collapse;font-size:.88rem}
+.tbl th,.tbl td{text-align:left;padding:6px 8px 6px 0;border-top:1px solid var(--soft);vertical-align:top}
+.tbl th{font-weight:500;color:var(--muted);font-size:.8rem;border-top:0}
+.tbl td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto}
+
+/* setup */
+.ed{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:8px;padding:10px 0;border-top:1px solid var(--soft);align-items:center}
+.ed:first-child{border-top:0}
+.ed .w{grid-column:1/-1;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:.85rem}
+.ed.h{grid-template-columns:minmax(0,1fr) 5rem auto}
+@media (max-width:480px){.ed{grid-template-columns:1fr 1fr}.ed > .in:first-child{grid-column:1/-1}.ed.h{grid-template-columns:minmax(0,1fr) 4rem auto}.ed.h > .in:first-child{grid-column:auto}}
+textarea.code{font-family:var(--mono);font-size:.8rem;min-height:220px;resize:vertical;white-space:pre;overflow:auto}
+.method{max-width:68ch;display:flex;flex-direction:column;gap:8px;font-size:.9rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:5px;font-size:.88rem;z-index:30;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: no-preference){.btn,.pt,.chip{transition:background-color .12s,border-color .12s}}
+.timer.on .clock.over,.clock.over{color:var(--bad)}
+body.mini .top,body.mini nav{display:none}
+body.mini .wrap{padding:0;gap:0;max-width:none;margin:0}
+/* the widget pill: fixed size so the launcher can clip the window to it; the 2px border colour is what the launcher looks for */
+.pillw{box-sizing:border-box;width:150px;height:34px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 10px;border:2px solid var(--run);background:var(--run-soft);border-radius:999px;overflow:hidden;font-size:13px}
+.pillw.idle{background:var(--panel)}
+.pillw .dot{width:8px;height:8px;border-radius:50%;background:var(--run);flex:none}
+.pillw.idle .dot,.pillw.paused .dot{background:var(--muted)}
+@media (prefers-reduced-motion: no-preference){.pillw.run:not(.paused) .dot{animation:runblink 2s ease-in-out infinite}}
+@keyframes runblink{50%{opacity:.3}}
+.pillw .pt-title{font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.pillw .ptime{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;font-size:16px;line-height:1;color:var(--run);background:none;border:0;padding:0 2px;cursor:pointer;white-space:nowrap}
+.pillw .ptime.over{color:var(--bad)}
+.pillw .ptime small{font-family:var(--sans);font-weight:400;font-size:10px;color:var(--muted);margin-left:3px}
+.pillw .ib{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;padding:0;text-decoration:none}
+.pillw .ib.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pillw .ib svg{width:13px;height:13px;fill:currentColor}
+.pillw .tb{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:3px 10px;text-decoration:none;font-size:12px;flex:none}
+.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px;max-width:68ch}
+kbd{font-family:var(--mono);font-size:.82em;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--bg)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.chunks{display:flex;flex-direction:column;gap:6px}
+.chk{display:grid;grid-template-columns:1.2rem 4.8rem minmax(0,1fr) 2.2rem;gap:6px;align-items:center}
+.chk .done{grid-column:2/-1;font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Self-Study Log</h1>
+    <span class="status" id="status" data-s="loading">Loading…</span>
+  </header>
+
+  <nav aria-label="Sections">
+    <a href="#today" data-tab="today">Today</a>
+    <a href="#plan" data-tab="plan">Plan</a>
+    <a href="#insights" data-tab="insights">Insights</a>
+    <a href="#setup" data-tab="setup">Setup</a>
+  </nav>
+
+  <section class="view" id="view-today">
+    <div id="banner" data-dyn></div>
+    <div id="timer" data-dyn></div>
+    <div id="prompts" class="duo" data-dyn></div>
+    <div id="daily" data-dyn></div>
+    <div id="today-tasks" data-dyn></div>
+    <div id="recent" data-dyn></div>
+  </section>
+
+  <section class="view" id="view-plan" hidden>
+    <div class="head">
+      <div class="seg" role="group" aria-label="Which tasks to show">
+        <button type="button" data-act="pf" data-v="week">Next 7 days</button>
+        <button type="button" data-act="pf" data-v="month">Next 30 days</button>
+        <button type="button" data-act="pf" data-v="all">All open</button>
+        <button type="button" data-act="pf" data-v="done">Done</button>
+      </div>
+      <button type="button" class="btn pri" data-act="task-new">Add task</button>
+    </div>
+    <div id="bank" data-dyn></div>
+    <div id="plan-list" data-dyn></div>
+  </section>
+
+  <section class="view" id="view-insights" hidden>
+    <div class="head">
+      <div class="seg" role="group" aria-label="Date range">
+        <button type="button" data-act="rg" data-v="4">4 days</button>
+        <button type="button" data-act="rg" data-v="7">7 days</button>
+        <button type="button" data-act="rg" data-v="28">28 days</button>
+        <button type="button" data-act="rg" data-v="90">90 days</button>
+        <button type="button" data-act="rg" data-v="all">All</button>
+      </div>
+      <span class="muted small" id="rg-note"></span>
+    </div>
+    <div id="insights" class="view" data-dyn></div>
+  </section>
+
+  <section class="view" id="view-mini" hidden><div id="mini" data-dyn></div></section>
+
+  <section class="view" id="view-setup" hidden>
+    <div class="panel">
+      <div class="head"><h2>Rating scales</h2><button type="button" class="btn sm" data-act="m-add">Add scale</button></div>
+      <p class="muted small">Each scale is one question answered by tapping a number. Tick when it should be asked: before a work session, after it, or in a stand-alone check-in.</p>
+      <div id="set-measures" data-dyn></div>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Habits</h2><button type="button" class="btn sm" data-act="h-add">Add habit</button></div>
+      <p class="muted small">Daily yes/no habits with a target number of days per week.</p>
+      <div id="set-habits" data-dyn></div>
+    </div>
+    <div class="panel">
+      <h2>Work types and reminders</h2>
+      <div id="set-misc" data-dyn></div>
+    </div>
+    <div class="panel">
+      <h2>Taskbar timer (Windows)</h2>
+      <p class="small" style="max-width:68ch">TaskbarPill.exe shows the running session's clock on the taskbar, just left of the tray icons: only the time. It appears when a session starts, hides when none is running and never takes focus. Click it to switch between time passed and time left; right-click it to quit.</p>
+      <p class="small" id="pill-status"></p>
+    </div>
+    <div class="panel">
+      <h2>Account and sync</h2>
+      <div id="set-acct" data-dyn></div>
+    </div>
+    <div class="panel">
+      <h2>Google Calendar connection</h2>
+      <div id="set-bridge" data-dyn></div>
+    </div>
+    <div class="panel">
+      <h2>Calendar and working hours</h2>
+      <p class="muted small" style="max-width:68ch">The log reads when you are busy from Google Calendar and keeps one placeholder per chunk in the gaps: working hours first, evenings only when those are full. When you start a session it takes its placeholder's spot and later placeholders move so nothing overlaps. It keeps start and end times only, never event titles or details.</p>
+      <div id="set-cal" data-dyn></div>
+    </div>
+    <div class="panel">
+      <h2>Customise with any AI model</h2>
+      <p class="muted small" style="max-width:68ch">Everything above is stored as the JSON below. Copy the brief, paste it into any AI model with what you want changed, then paste its answer back here and apply it.</p>
+      <textarea class="in code" id="cfg-json" spellcheck="false" aria-label="Configuration JSON"></textarea>
+      <div class="row">
+        <button type="button" class="btn" data-act="cfg-brief">Copy AI brief</button>
+        <button type="button" class="btn" data-act="cfg-copy">Copy JSON</button>
+        <button type="button" class="btn pri" data-act="cfg-apply">Apply JSON</button>
+        <span class="small" id="cfg-msg" role="status"></span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Your data</h2>
+      <p class="muted small" style="max-width:68ch">Take a copy whenever you like. The daily table has one row per day and opens directly in R, Python or a spreadsheet.</p>
+      <div class="row">
+        <button type="button" class="btn" data-act="ex-daily">Daily table (CSV)</button>
+        <button type="button" class="btn" data-act="ex-sessions">Sessions (CSV)</button>
+        <button type="button" class="btn" data-act="ex-all">Everything (JSON)</button>
+        <button type="button" class="btn" data-act="import">Import a JSON export</button>
+        <input type="file" id="import-file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>What the measures are based on</h2>
+      <div class="method">
+        <p><b>Mood, energy, tension.</b> Momentary affect is usually described on three axes: pleasantness, energetic arousal and tense arousal (Russell, 1980; Thayer, 1989; Wilhelm &amp; Schoebi, 2007). One item each keeps a rating under ten seconds.</p>
+        <p><b>When ratings are taken.</b> Ratings are tied to the start and end of work, which is event-based experience sampling. It avoids asking you to remember how a session felt later, and the before/after difference shows what a kind of work does to you.</p>
+        <p><b>No preset answer.</b> The scales start blank. A slider with a default position pulls answers toward it.</p>
+        <p><b>Estimate ratio.</b> Actual minutes divided by planned minutes for finished tasks. People underestimate their own task time fairly reliably (Buehler, Griffin &amp; Ross, 1994), and the ratio per work type tells you how much to pad.</p>
+        <p><b>Mental demand.</b> A single item adapted from the NASA Task Load Index (Hart &amp; Staveland, 1988).</p>
+        <p><b>Weekly screen.</b> The PHQ-4 (Kroenke et al., 2009): two anxiety items and two depression items, each scored 0 to 3. A pair scoring 3 or more is the usual cut-off for follow-up. It is a screen and cannot diagnose anything.</p>
+        <p><b>Chunks and goal posts.</b> A long task can be split into chunks of the length you choose, each with an optional goal post: a concrete target set before you start. After a chunk you rate how much of the goal post you reached, which measures progress without leaning on mood. Calendar placeholders only hold time; your chunks decide the length.</p>
+        <p><b>Expectation and reality.</b> Before a session you predict how demanding it will be and how much progress you will make; afterwards you rate what happened. Forecasts of one's own experience are off in consistent directions (Wilson &amp; Gilbert, 2003), and the gap for each kind of work is something you can plan around.</p>
+        <p><b>When the analysis runs.</b> Nothing is scheduled. Every chart and finding is recalculated from your stored entries each time you open Insights, for the range you pick. The 4-day check-up always compares the last 4 days with the 28 days before them, and calls a value out of range when it sits more than one standard deviation from your own average.</p>
+        <p><b>Work logged afterwards.</b> A session logged from memory gets one overall rating, with no separate before and after. Remembered feelings drift toward the most intense moment, the ending, and your mood while answering, so a remembered before-and-after pair mostly measures memory (Kahneman et al., 1993; Robinson &amp; Clore, 2002). These entries count fully for time, are marked as recalled, and stay out of rating averages unless you include them on the Insights tab.</p>
+        <p><b>Reading the findings.</b> Every comparison shows how many entries it rests on and stays hidden until there are enough. They are correlations within one person. To test one, change that one thing for two weeks and watch the same chart.</p>
+        <p class="muted">Check the sources yourself before citing them anywhere.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="sheet" hidden><div id="sheet-body" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="platform.js"></script>
+<script>
+(function(){
+'use strict';
+/* ---------- helpers ---------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isNum=v=>typeof v==='number'&&isFinite(v);
+const DAY=864e5;
+const pad=n=>String(n).padStart(2,'0');
+function dkey(ms){const d=new Date(ms);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function dparse(k){const p=k.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]).getTime();}
+function today(){return dkey(Date.now());}
+function addDays(k,n){const d=new Date(dparse(k));d.setDate(d.getDate()+n);return dkey(d.getTime());}
+function weekStart(k){const d=new Date(dparse(k));d.setDate(d.getDate()-((d.getDay()+6)%7));return dkey(d.getTime());}
+function labelDay(k){return new Date(dparse(k)).toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+function hm(ms){const d=new Date(ms);return pad(d.getHours())+':'+pad(d.getMinutes());}
+function fmtMin(m){m=Math.round(m||0);if(m<60)return m+' min';return Math.floor(m/60)+' h '+pad(m%60);}
+function ago(ms){const m=Math.max(0,Math.round((Date.now()-ms)/6e4));if(m<60)return m+' min ago';if(m<1440)return Math.round(m/60)+' h ago';return Math.round(m/1440)+' d ago';}
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const median=a=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+const sd=a=>{if(a.length<2)return null;const m=mean(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/(a.length-1));};
+function pearson(xs,ys){const n=xs.length;if(n<3)return null;const mx=mean(xs),my=mean(ys);let sxy=0,sxx=0,syy=0;
+  for(let i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)*(xs[i]-mx);syy+=(ys[i]-my)*(ys[i]-my);}
+  return sxx&&syy?sxy/Math.sqrt(sxx*syy):null;}
+const f1=v=>v==null?'–':(Math.round(v*10)/10).toFixed(1);
+
+/* ---------- configuration (editable in Setup, stored as config/main) ---------- */
+const DEFAULT_CONFIG={
+  version:1, scale:7,
+  measures:[
+    {id:'mood',name:'Mood',ask:'How do you feel right now?',low:'Unpleasant',high:'Pleasant',when:['before','after','moment']},
+    {id:'energy',name:'Energy',ask:'How much energy do you have right now?',low:'Drained',high:'Energised',when:['before','after','moment']},
+    {id:'tension',name:'Tension',ask:'How tense do you feel right now?',low:'Calm',high:'Tense',when:['before','after','moment']},
+    {id:'focus',name:'Focus',ask:'How focused were you during this session?',askBefore:'How focused do you expect to be during this session?',askNow:'How focused do you feel right now?',low:'Scattered',high:'Absorbed',when:['after']},
+    {id:'demand',name:'Mental demand',ask:'How mentally demanding was the task?',askBefore:'How mentally demanding do you expect this task to be?',low:'Very low',high:'Very high',when:['before','after']},
+    {id:'progress',name:'Progress made',ask:'How much progress did you make?',askBefore:'How much progress do you expect to make?',low:'None',high:'A lot',when:['before','after']}
+  ],
+  taskTypes:['Reading','Problem set','Writing','Studying','Data analysis','Admin'],
+  habits:[
+    {id:'move',name:'Exercise or movement',perWeek:4},
+    {id:'outside',name:'Time outdoors',perWeek:7},
+    {id:'meals',name:'Regular meals',perWeek:7},
+    {id:'people',name:'Time with someone I care about',perWeek:5}
+  ],
+  nudgeHours:4, dayStart:8, dayEnd:22,
+  cal:{on:false,calendars:[],target:null,never:[],workStart:9,workEnd:18,eveningEnd:22,maxBlock:120,breakMin:15,minBlock:30,alert:true}
+};
+const WHEN=[['before','Before work'],['after','After work'],['moment','Check-in']];
+const PHQ=['Feeling nervous, anxious or on edge','Not being able to stop or control worrying','Little interest or pleasure in doing things','Feeling down, depressed, or hopeless'];
+const PHQ_OPT=['Not at all','Several days','More than half the days','Nearly every day'];
+
+/* ---------- store: Platform.openStore() gives this device's storage, or your Firebase project when one is configured ---------- */
+const COLS=['tasks','sessions','checkins','days','weekly','config'];
+const S={};COLS.forEach(c=>S[c]=new Map());
+let db=null,demo=false,loaded=false,status='loading',downloads=null;
+const queues={},pending={};
+function setStatus(s){status=s;const el=$('#status');el.dataset.s=s;
+  el.textContent={loading:'Loading…',saved:'Saved',saving:'Saving…',demo:'Example data',slow:'Still loading…',error:'Save failed',signin:'Signed out'}[s]||s;}
+function enqueue(col,id){const k=col+'/'+id;
+  queues[k]=(queues[k]||Promise.resolve()).then(()=>{
+    if(!(k in pending))return;const p=pending[k];delete pending[k];
+    const ref=db.collection(col).doc(id);return p===null?ref.delete():ref.set(p);
+  }).then(()=>{if(!Object.keys(pending).length&&status!=='error')setStatus('saved');},e=>{setStatus('error');toast('That change could not be saved. Check your connection and try again.');});}
+function put(col,id,data){const c=clone(data);S[col].set(id,c);schedule();if(db){pending[col+'/'+id]=c;setStatus('saving');enqueue(col,id);}}
+function del(col,id){S[col].delete(id);schedule();if(db){pending[col+'/'+id]=null;setStatus('saving');enqueue(col,id);}}
+function cfg(){const c=S.config.get('main');if(!c)return DEFAULT_CONFIG;
+  return Object.assign({},DEFAULT_CONFIG,c,{
+    measures:(Array.isArray(c.measures)?c.measures:DEFAULT_CONFIG.measures).map(m=>{const d=m&&m.ask===undefined?DEFAULT_CONFIG.measures.find(x=>x.id===m.id):null; // older saved scales pick up the default wording
+      return d?Object.assign({ask:d.ask},d.askBefore?{askBefore:d.askBefore}:{},d.askNow?{askNow:d.askNow}:{},m):m;}),
+    habits:Array.isArray(c.habits)?c.habits:DEFAULT_CONFIG.habits,
+    taskTypes:Array.isArray(c.taskTypes)?c.taskTypes:DEFAULT_CONFIG.taskTypes,
+    scale:c.scale>=3&&c.scale<=10?Math.round(c.scale):7,
+    cal:Object.assign({},DEFAULT_CONFIG.cal,c.cal&&typeof c.cal==='object'?c.cal:{})});}
+function saveCfg(c){put('config','main',c);}
+const active=()=>S.config.get('active')||null;
+const ready=()=>demo||loaded;
+
+async function init(){
+  route();renderAll();
+  let d=null;
+  try{d=await Platform.openStore();}catch(e){d=null;}
+  if(!d){setStatus('error');$('#banner').innerHTML='<div class="note bad">Your log could not be opened. Reload the page; if it keeps happening, check config.js.</div>';return;}
+  if(d.kind==='signin'){needSignIn=d;setStatus('signin');renderAll();return;}
+  db=d;const got=new Set();
+  const slow=setTimeout(()=>{if(!loaded){setStatus('slow');schedule();}},10000);
+  COLS.forEach(c=>{db.collection(c).onSnapshot(snap=>{
+    const m=new Map();snap.docs.forEach(x=>m.set(x.id,x.data()));
+    for(const k in pending){if(k.indexOf(c+'/')===0){const id=k.slice(c.length+1);if(pending[k]===null)m.delete(id);else m.set(id,pending[k]);}}
+    S[c]=m;got.add(c);
+    if(got.size===COLS.length&&!loaded){loaded=true;clearTimeout(slow);if(status!=='saving')setStatus('saved');setTimeout(()=>{calRefresh();pillStart();},50);}
+    schedule();
+  },err=>{clearTimeout(slow);setStatus('error');schedule();});});
+}
+
+/* ---------- example data, used only when the saved log cannot be reached ---------- */
+function seedDemo(){
+  let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646;};
+  const cl=v=>Math.max(1,Math.min(7,Math.round(v)));
+  const c=DEFAULT_CONFIG,courses=['Statistics','Research Methods','Seminar'];
+  const bias={Reading:1.6,'Problem set':1.25,Writing:1.4,Studying:1,'Data analysis':1.15,Admin:.8};
+  const names={Reading:'Read chapter','Problem set':'Problem set',Writing:'Draft section',Studying:'Review notes, week','Data analysis':'Lab analysis',Admin:'Emails and forms'};
+  const t0=dparse(today());let n=0;
+  for(let d=34;d>=0;d--){
+    const day=t0-d*DAY,k=dkey(day),sleepH=Math.round((5.5+rnd()*3)*2)/2,habits={};
+    c.habits.forEach(h=>{if(rnd()<.6)habits[h.id]=true;});
+    S.days.set(k,{sleepH:sleepH,sleepQ:cl(sleepH-2.5+rnd()*2),habits:habits});
+    const base=3.1+(sleepH-5.5)*.45+(habits.move?.6:0)+(habits.outside?.3:0);
+    const count=d===0?(new Date().getHours()>=3?1:0):Math.floor(rnd()*3.2);
+    for(let i=0;i<count;i++){
+      const type=c.taskTypes[Math.floor(rnd()*c.taskTypes.length)],course=courses[Math.floor(rnd()*3)],est=[30,45,60,90][Math.floor(rnd()*4)];
+      const hour=d===0?new Date().getHours()-2:[9,10,14,16,19,21][Math.floor(rnd()*6)];
+      const min=Math.max(10,Math.round(est*bias[type]*(.75+rnd()*.5))),start=day+hour*36e5+Math.floor(rnd()*30)*6e4;
+      const late=hour>=19?-.9:0,id='t'+(++n),title=names[type]+(type==='Admin'?'':' '+(1+Math.floor(rnd()*9)));
+      S.tasks.set(id,{title:title,course:course,type:type,est:est,due:addDays(k,Math.floor(rnd()*3)),done:d>0,created:start-DAY});
+      const pre={mood:cl(base+.6+rnd()),energy:cl(base+.3+late+rnd()),tension:cl(4.6-base*.3+rnd()*1.5),demand:cl(2.3+bias[type]+rnd()),progress:cl(base+1.3+rnd())};
+      const drain=(type==='Reading'||type==='Writing')?-.9:.3;
+      S.sessions.set('s'+n,{taskId:id,title:title,course:course,type:type,start:start,end:start+Math.min(min,d===0?100:min)*6e4,min:d===0?Math.min(min,100):min,pre:pre,
+        post:{mood:cl(pre.mood+drain+rnd()-.5),energy:cl(pre.energy-.7+rnd()*.8),tension:cl(pre.tension+rnd()-.5),focus:cl(base+.8+late+rnd()),demand:cl(3+bias[type]+rnd()*1.5),progress:cl(base+.5+rnd())},note:''});
+    }
+    if(d>0&&rnd()<.5)S.checkins.set('c'+d,{t:day+(13+Math.floor(rnd()*6))*36e5,vals:{mood:cl(base+.5+rnd()),energy:cl(base+rnd()),tension:cl(3+rnd()*2)},note:''});
+    if(d%7===3)S.weekly.set('w'+d,{t:day+20*36e5,a:[rnd()<.5?1:0,rnd()<.4?1:0,rnd()<.3?1:0,rnd()<.4?1:0]});
+  }
+  [['Read chapter 7','Statistics','Reading',60,2],['Problem set 5','Research Methods','Problem set',90,3],['Draft literature section','Seminar','Writing',120,5],['Lab 4 analysis','Statistics','Data analysis',75,9]]
+    .forEach((r,i)=>S.tasks.set('o'+i,{title:r[0],course:r[1],type:r[2],est:r[3],due:addDays(today(),r[4]),done:false,created:Date.now()}));
+}
+
+/* ---------- derived data ---------- */
+let inclRecall=false;try{inclRecall=localStorage.getItem('ssl-recall')==='1';}catch(e){}
+const postOf=s=>s.retro?(inclRecall?s.overall:null):s.post; // ratings given from memory count only when the viewer opts in
+function ratings(){const out=[];
+  S.sessions.forEach(s=>{if(s.retro){if(inclRecall&&s.overall&&Object.keys(s.overall).length)out.push({t:s.end||s.start,vals:s.overall});return;}
+    if(s.pre&&Object.keys(s.pre).length)out.push({t:s.start,vals:s.pre});if(s.post&&Object.keys(s.post).length)out.push({t:s.end||s.start,vals:s.post});});
+  S.checkins.forEach(c=>out.push({t:c.t,vals:c.vals||{}}));return out;}
+function loggedByTask(){const m=new Map();S.sessions.forEach(s=>{if(s.taskId)m.set(s.taskId,(m.get(s.taskId)||0)+(s.min||0));});return m;}
+function firstKey(){let t=Infinity;S.sessions.forEach(s=>{if(s.start<t)t=s.start;});S.checkins.forEach(c=>{if(c.t<t)t=c.t;});S.weekly.forEach(w=>{if(w.t<t)t=w.t;});
+  let k=isFinite(t)?dkey(t):null;S.days.forEach((v,key)=>{if(!k||key<k)k=key;});return k;}
+function buildDays(from,to){const idx=new Map(),out=[];let k=from,guard=0;
+  while(k<=to&&guard++<400){const o={k:k,min:0,n:0,sum:{},cnt:{},m:{},day:S.days.get(k)||{}};idx.set(k,o);out.push(o);k=addDays(k,1);}
+  S.sessions.forEach(s=>{const o=idx.get(dkey(s.start));if(o){o.min+=s.min||0;o.n++;}});
+  ratings().forEach(r=>{const o=idx.get(dkey(r.t));if(!o)return;for(const id in r.vals){const v=r.vals[id];if(isNum(v)){o.sum[id]=(o.sum[id]||0)+v;o.cnt[id]=(o.cnt[id]||0)+1;}}});
+  out.forEach(o=>{for(const id in o.sum)o.m[id]=o.sum[id]/o.cnt[id];});return out;}
+function estimation(sess){const by=new Map();sess.forEach(s=>{if(s.taskId)by.set(s.taskId,(by.get(s.taskId)||0)+(s.min||0));});
+  const rows=[];by.forEach((min,id)=>{const t=S.tasks.get(id);const e0=t&&(t.est0||t.est);if(t&&t.done&&e0>0)rows.push({type:t.type||'Other',ratio:min/e0});});
+  const g={};rows.forEach(r=>(g[r.type]=g[r.type]||[]).push(r.ratio));
+  return{n:rows.length,overall:median(rows.map(r=>r.ratio)),byType:Object.keys(g).map(k=>({label:k,v:median(g[k]),n:g[k].length})).sort((a,b)=>b.v-a.v)};}
+function groupTime(sess,key){const g={};sess.forEach(s=>{const k=s[key]||'Unlabelled';g[k]=g[k]||{label:k,v:0,n:0};g[k].v+=s.min||0;g[k].n++;});return Object.values(g).sort((a,b)=>b.v-a.v);}
+const BLOCKS=[['Morning',5,12],['Afternoon',12,17],['Evening',17,22],['Night',22,29]];
+function blockOf(ms){let h=new Date(ms).getHours();if(h<5)h+=24;return BLOCKS.find(b=>h>=b[1]&&h<b[2])[0];}
+function byBlock(sess,id){return BLOCKS.map(b=>{const a=sess.filter(s=>blockOf(s.start)===b[0]).map(s=>{const q=postOf(s);return q?q[id]:null;}).filter(isNum);return{label:b[0],v:mean(a),n:a.length};});}
+function effect(sess,id){const g={};sess.forEach(s=>{const a=s.pre&&s.pre[id],b=s.post&&s.post[id];if(isNum(a)&&isNum(b)){const k=s.type||'Other';(g[k]=g[k]||[]).push(b-a);}});
+  return Object.keys(g).map(k=>({label:k,v:mean(g[k]),n:g[k].length})).sort((a,b)=>a.v-b.v);}
+function assoc(days,sess){
+  const defs=[['Hours slept','focus that day',d=>d.day.sleepH,d=>d.m.focus],['Hours slept','mood that day',d=>d.day.sleepH,d=>d.m.mood],
+    ['Sleep quality','energy that day',d=>d.day.sleepQ,d=>d.m.energy],['Minutes worked','mood that day',d=>d.n?d.min:null,d=>d.m.mood]];
+  const out=defs.map(p=>{const xs=[],ys=[];days.forEach(d=>{const x=p[2](d),y=p[3](d);if(isNum(x)&&isNum(y)){xs.push(x);ys.push(y);}});
+    return{a:p[0],b:p[1],unit:'days',n:xs.length,r:xs.length>=10?pearson(xs,ys):null};});
+  const xs=[],ys=[];sess.forEach(s=>{const x=s.pre&&s.pre.energy,y=s.post&&s.post.focus;if(isNum(x)&&isNum(y)){xs.push(x);ys.push(y);}});
+  out.push({a:'Energy before a session',b:'focus during it',unit:'sessions',n:xs.length,r:xs.length>=10?pearson(xs,ys):null});return out;}
+function habitStats(days){return cfg().habits.map(h=>{const on=[],off=[];let done=0;
+  days.forEach(d=>{const did=!!(d.day.habits&&d.day.habits[h.id]);if(did)done++;const m=d.m.mood;if(isNum(m))(did?on:off).push(m);});
+  return{h:h,done:done,rate:days.length?done/days.length:0,on:mean(on),off:mean(off),nOn:on.length,nOff:off.length};});}
+function streak(id){let k=today(),n=0;const has=x=>{const d=S.days.get(x);return!!(d&&d.habits&&d.habits[id]);};
+  if(!has(k))k=addDays(k,-1);while(has(k)&&n<999){n++;k=addDays(k,-1);}return n;}
+function weekCount(id){let k=weekStart(today()),n=0;const t=today();while(k<=t){const d=S.days.get(k);if(d&&d.habits&&d.habits[id])n++;k=addDays(k,1);}return n;}
+function baseline(){const t=today(),all=buildDays(addDays(t,-34),t);
+  const rec=all.slice(-7).map(d=>d.m.mood).filter(isNum),base=all.slice(0,-7).map(d=>d.m.mood).filter(isNum);
+  if(rec.length<4||base.length<10)return{ready:false,rec:rec.length,base:base.length};
+  const mb=mean(base),s=sd(base);return{ready:true,recent:mean(rec),base:mb,z:s?(mean(rec)-mb)/s:0};}
+function weeklySorted(){return Array.from(S.weekly.values()).filter(w=>Array.isArray(w.a)).sort((a,b)=>a.t-b.t);}
+function phqScore(w){const a=w.a.map(Number);return{gad:a[0]+a[1],phq:a[2]+a[3],total:a[0]+a[1]+a[2]+a[3]};}
+
+/* ---------- render plumbing ---------- */
+let tab='today',planFilter='week',range='28',trendM='mood',timerT=0,dirty=false;
+function schedule(){if(timerT)return;timerT=setTimeout(()=>{timerT=0;
+  const ae=document.activeElement;
+  if(ae&&ae.closest&&ae.closest('[data-dyn]')&&ae.matches('input:not([type=checkbox]),textarea,select')){dirty=true;return;}
+  dirty=false;renderAll();},30);}
+document.addEventListener('focusout',()=>{if(dirty)setTimeout(schedule,0);});
+let pendingFinish=false;
+function route(){const h=(location.hash||'').replace('#','');if(h==='finish')pendingFinish=true;tab=['today','plan','insights','setup','mini'].indexOf(h)>=0?h:'today';
+  ['today','plan','insights','setup','mini'].forEach(t=>{$('#view-'+t).hidden=t!==tab;});document.body.classList.toggle('mini',tab==='mini');
+  document.querySelectorAll('nav a').forEach(a=>{if(a.dataset.tab===tab)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});}
+window.addEventListener('hashchange',()=>{route();renderAll();});
+let rsT=0;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(tab==='insights')schedule();},200);});
+function renderAll(){
+  pillSync();
+  document.querySelectorAll('[data-act="pf"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===planFilter)));
+  document.querySelectorAll('[data-act="rg"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===range)));
+  if(tab==='today')renderToday();else if(tab==='plan')renderPlan();else if(tab==='insights')renderInsights();else if(tab==='mini')renderMini();else renderSetup();}
+let needSignIn=null;
+const loadingHtml=()=>needSignIn?'<p class="empty"><b>Sign in to open your log.</b>It is kept in your own Google account, so it syncs between your phone and computer.</p><div><button type="button" class="btn pri" data-act="sign-in">Sign in with Google</button></div>':'<p class="empty">'+(status==='slow'?'Your log is taking a while to load. It will appear here once the connection answers.':status==='error'?'Your log could not be loaded in this view.':'Loading your log…')+'</p>';
+const emptyHtml=(a,b)=>'<p class="empty"><b>'+esc(a)+'</b>'+esc(b)+'</p>';
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true;},3200);}
+
+/* ---------- Today ---------- */
+function elapsedMs(a,now){return(a.pausedAt||now)-a.start-(a.pausedMs||0);}
+function clockText(ms){const s=Math.max(0,Math.floor(ms/1000));return pad(Math.floor(s/3600))+':'+pad(Math.floor(s/60)%60)+':'+pad(s%60);}
+setInterval(tickTimer,1000);
+
+/* ---------- running timer and the pinnable timer widget (#mini) ---------- */
+let tmode='track';try{tmode=localStorage.getItem('ssl-tmode')==='press'?'press':'track';}catch(e){}
+function leftMs(a,now){return a.planMin!=null?a.planMin*6e4-elapsedMs(a,now):null;}
+function hmShort(ms){const m=Math.floor(Math.max(0,ms)/6e4);return Math.floor(m/60)+':'+pad(m%60);}
+/* tracking mode shows time passed; pressure mode shows time left, then overtime */
+function cClock(ms){const t=Math.max(0,Math.floor(ms/1000)),h=Math.floor(t/3600);return(h?h+':':'')+pad(Math.floor(t/60)%60)+':'+pad(t%60);}
+const shortLab=v=>v.lab==='left'?'left':v.lab==='over plan'?'over':''; // time passed needs no label; red means past the plan
+function timerView(a,now,short){const el=elapsedMs(a,now),l=leftMs(a,now),f=short==='c'?cClock:short?hmShort:clockText;
+  if(tmode==='press'&&l!=null)return l>=0?{txt:f(l),lab:'left',over:false}:{txt:'+'+f(-l),lab:'over plan',over:true};
+  return{txt:f(el),lab:l!=null&&l<0?'passed · over plan':'passed',over:l!=null&&l<0};}
+function tickTimer(){const a=ready()?active():null;if(!a)return;const v=timerView(a,Date.now(),false);
+  const c=$('#clock');if(c){c.textContent=v.txt;c.classList.toggle('over',v.over);}
+  const lb=$('#clock-lab');if(lb)lb.textContent=v.lab;
+  const m=$('#mclock');if(m){const w=timerView(a,Date.now(),'c');m.innerHTML=esc(w.txt)+'<small>'+esc(shortLab(w))+'</small>';m.classList.toggle('over',w.over);}
+}
+function timerPanel(a,now,c){const v=timerView(a,now,false),hasPlan=a.planMin!=null,el=elapsedMs(a,now),base=(hasPlan&&a.planMin>0?a.planMin:c.cal.maxBlock)*6e4,over=el-base;
+  const guard=!a.pausedAt&&over>30*6e4&&!(a.ack&&now-a.ack<30*6e4);
+  const meta=[a.chunkN>1?'Chunk '+a.chunkIdx+' of '+a.chunkN:'',hasPlan?fmtMin(Math.max(0,a.planMin))+' planned':'',a.goal?'goal: '+a.goal:''].filter(Boolean);
+  return '<div class="panel timer on"><div class="head"><h3>'+(a.pausedAt?'Paused':'Working on')+'</h3><span class="muted small">started '+hm(a.start)+'</span></div>'+
+    (guard?'<div class="note">The clock has run '+fmtMin(over/6e4)+' past '+(hasPlan?'the planned time':'your usual session length')+'. Still working?<div class="row" style="margin-top:6px"><button type="button" class="btn sm" data-act="still">Still working</button><button type="button" class="btn sm" data-act="stopped-early">I stopped earlier</button></div></div>':'')+
+    '<div><div class="row" style="align-items:baseline"><div class="clock'+(v.over?' over':'')+'" id="clock">'+v.txt+'</div><span class="muted" id="clock-lab">'+v.lab+'</span></div>'+
+    '<div><b>'+esc(a.title)+'</b> <span class="muted">'+esc([a.course,a.type].filter(Boolean).join(' · '))+'</span></div>'+
+    (meta.length?'<div class="meta">'+meta.map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>':'')+'</div>'+
+    '<div class="row"><button type="button" class="btn pri" data-act="finish">Finish session</button><button type="button" class="btn" data-act="'+(a.pausedAt?'resume':'pause')+'">'+(a.pausedAt?'Resume':'Pause')+'</button>'+
+    '<div class="seg" role="group" aria-label="What the clock shows"><button type="button" data-act="tmode-set" data-v="track" aria-pressed="'+(tmode!=='press'||!hasPlan)+'">Time passed</button><button type="button" data-act="tmode-set" data-v="press" aria-pressed="'+(tmode==='press'&&hasPlan)+'"'+(hasPlan?'':' disabled title="This session has no planned length"')+'>Time left</button></div>'+
+    '</div></div>';}
+const MINI_URL=location.href.split('#')[0]+'#mini';
+/* the timer widget: one line, sized for a small always-on-top window */
+const BASE_URL=MINI_URL.split('#')[0];
+/* the widget shows only the clock: it is a reminder that a session is running, the app holds everything else */
+function renderMini(){const el=$('#mini');
+  if(!ready()){el.innerHTML='<div class="pillw idle"><span class="dot" aria-hidden="true"></span><span class="pt-title muted">loading</span></div>';return;}
+  const a=active();
+  if(a){const v=timerView(a,Date.now(),'c'),hasPlan=a.planMin!=null;
+    el.innerHTML='<div class="pillw run'+(a.pausedAt?' paused':'')+'" title="'+esc((a.pausedAt?'Paused: ':'')+a.title)+'"><span class="dot" aria-hidden="true"></span>'+
+      '<button type="button" class="ptime'+(v.over?' over':'')+'" id="mclock" data-act="tmode" title="'+(hasPlan?'Tap to switch between time passed and time left':'No planned length, so only time passed')+'">'+esc(v.txt)+'<small>'+esc(shortLab(v))+'</small></button></div>';
+    return;}
+  el.innerHTML='<div class="pillw idle"><span class="dot" aria-hidden="true"></span><span class="pt-title muted">no session</span></div>';}
+
+function taskRow(t,id,logged,withEdit){
+  const over=!t.done&&t.due&&t.due<today();
+  const m=logged.get(id)||0;
+  const nb=phOf(t).filter(b=>b.e>Date.now()).sort((x,y)=>x.s-y.s)[0],chs=t.chunks||[],ci=chs.findIndex(x=>!x.done);
+  const bits=[t.course,t.type,t.due?'due '+labelDay(t.due):'',chs.length>1&&ci>=0&&!t.done?'chunk '+(ci+1)+' of '+chs.length:'',nb&&!t.done?'placeholder '+labelDay(dkey(nb.s))+' '+hm(nb.s):''].filter(Boolean).map(esc);
+  const time=(m||t.est)?'<span class="mono">'+(m?fmtMin(m):'0 min')+(t.est?' / '+fmtMin(t.est)+' planned':'')+'</span>':'';
+  return '<div class="task'+(t.done?' done':'')+'" data-id="'+esc(id)+'">'+
+    '<input type="checkbox" data-chg="task-done" '+(t.done?'checked':'')+' aria-label="Mark done: '+esc(t.title)+'">'+
+    '<div><div class="t">'+esc(t.title)+(over?' <span class="pill bad">overdue</span>':'')+'</div><div class="meta">'+bits.map(b=>'<span>'+b+'</span>').join('')+time+'</div></div>'+
+    '<div class="row">'+(withEdit?'<button type="button" class="btn sm ghost" data-act="task-edit">Edit</button>':'')+
+    (t.done?'':'<button type="button" class="btn sm" data-act="start">Start</button>')+'</div></div>';
+}
+function renderToday(){
+  const c=cfg(),a=active(),now=Date.now(),tk=today();
+  $('#banner').innerHTML=demo?'<div class="note">These are example entries so you can see how the log works. Your own log can\'t be reached in this view, so nothing you enter here is saved.</div>':'';
+  if(!ready()){$('#timer').innerHTML='<div class="panel">'+loadingHtml()+'</div>';['prompts','daily','today-tasks','recent'].forEach(i=>{$('#'+i).innerHTML='';});return;}
+  if(pendingFinish){pendingFinish=false;setTimeout(()=>{if(active())afterSheet(false);else toast('No session is running.');},0);}
+  // timer
+  $('#timer').innerHTML=a?timerPanel(a,now,c)
+    :'<div class="panel timer"><div class="head"><h3>Timer</h3></div><div class="clock muted">00:00:00</div>'+
+    '<div class="row"><span class="muted">Press Start on a task below, or</span><button type="button" class="btn sm" data-act="start-free">time something unplanned</button><button type="button" class="btn sm" data-act="retro-free">log work already done</button></div></div>';
+  // prompts
+  let last=0;ratings().forEach(r=>{if(r.t>last)last=r.t;});
+  const h=new Date().getHours(),dueC=h>=c.dayStart&&h<c.dayEnd&&(now-last)>c.nudgeHours*36e5;
+  const ws=weeklySorted(),lw=ws.length?ws[ws.length-1].t:0,dueW=(now-lw)>7*DAY;
+  $('#prompts').innerHTML=
+    '<div class="panel"><div class="head"><h3 class="'+(dueC?'due':'')+'">Check-in</h3><span class="muted small">'+(last?'last rating '+ago(last):'no ratings yet')+'</span></div>'+
+    '<p class="small muted">Rate how you feel right now. Ten seconds.</p><div><button type="button" class="btn'+(dueC?' pri':'')+'" data-act="checkin">Check in now</button></div></div>'+
+    '<div class="panel"><div class="head"><h3 class="'+(dueW?'due':'')+'">Weekly screen</h3><span class="muted small">'+(lw?'last done '+ago(lw):'not done yet')+'</span></div>'+
+    '<p class="small muted">Four questions about the past two weeks.</p><div><button type="button" class="btn'+(dueW?' pri':'')+'" data-act="weekly">Answer four questions</button></div></div>'+
+    '<div class="panel"><div class="head"><h3>4-day check-up</h3></div><p class="small muted">What is outside your usual range, and what to try.</p><div><button type="button" class="btn" data-act="checkup">Run check-up</button></div></div>';
+  // habits + sleep
+  const day=S.days.get(tk)||{};
+  $('#daily').innerHTML='<div class="panel"><div class="head"><h2>Today</h2><span class="muted small">'+new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})+'</span></div>'+
+    (c.habits.length?'<div class="chips">'+c.habits.map(hb=>'<button type="button" class="chip" data-act="habit" data-id="'+esc(hb.id)+'" aria-pressed="'+(!!(day.habits&&day.habits[hb.id]))+'">'+esc(hb.name)+'<span class="c">'+weekCount(hb.id)+'/'+(hb.perWeek||7)+'</span></button>').join('')+'</div>':
+      '<p class="empty">No habits yet. Add some in Setup.</p>')+
+    '<div class="grid2"><label class="field">Hours slept last night<input id="sleepH" type="number" inputmode="decimal" min="0" max="16" step="0.5" data-chg="sleepH" value="'+(isNum(day.sleepH)?day.sleepH:'')+'"></label>'+
+    '<label class="field">Sleep quality<select id="sleepQ" data-chg="sleepQ"><option value="">Not rated</option>'+
+      Array.from({length:c.scale},(_,i)=>'<option value="'+(i+1)+'"'+(day.sleepQ===i+1?' selected':'')+'>'+(i+1)+(i===0?' · very poor':i===c.scale-1?' · very good':'')+'</option>').join('')+'</select></label></div></div>';
+  // tasks due in the next 7 days (overdue included)
+  const logged=loggedByTask(),end=addDays(tk,6);
+  const list=Array.from(S.tasks.entries()).filter(e=>!e[1].done&&(!e[1].due||e[1].due<=end)).sort((x,y)=>(x[1].due||'9999').localeCompare(y[1].due||'9999'));
+  $('#today-tasks').innerHTML='<div class="panel"><div class="head"><h2>Work in the next 7 days</h2><button type="button" class="btn sm" data-act="task-new">Add task</button></div>'+
+    (list.length?'<div class="list">'+list.map(e=>taskRow(e[1],e[0],logged,false)).join('')+'</div>':
+      emptyHtml(S.tasks.size?'Nothing due in the next 7 days.':'No tasks yet.',S.tasks.size?'Later tasks are on the Plan tab.':'Add your coursework with a due date and a time estimate for each. Then press Start when you sit down to one.'))+'</div>';
+  // recent entries
+  const ents=[];S.sessions.forEach((s,id)=>ents.push({t:s.start,id:id,col:'sessions',s:s}));S.checkins.forEach((x,id)=>ents.push({t:x.t,id:id,col:'checkins',x:x}));
+  ents.sort((x,y)=>y.t-x.t);
+  const names={};c.measures.forEach(m=>{names[m.id]=m.name;});
+  const vals=o=>Object.keys(o||{}).map(k=>esc(names[k]||k)+' '+o[k]).join(' · ');
+  $('#recent').innerHTML=ents.length?'<div class="panel"><h2>Recent entries</h2><div class="list">'+ents.slice(0,8).map(e=>{
+    const d=labelDay(dkey(e.t))+' '+hm(e.t);
+    return '<div class="task" data-id="'+esc(e.id)+'" data-col="'+e.col+'"><span></span><div>'+(e.s?
+      '<div class="t">'+esc(e.s.title)+' <span class="mono muted">'+fmtMin(e.s.min)+'</span>'+(e.s.retro?' <span class="pill">recalled</span>':'')+'</div><div class="meta"><span>'+d+'</span><span>'+vals(e.s.retro?e.s.overall:e.s.post)+'</span></div>':
+      '<div class="t">Check-in</div><div class="meta"><span>'+d+'</span><span>'+vals(e.x.vals)+'</span></div>')+
+      '</div><button type="button" class="btn sm ghost" data-act="entry-del">Delete</button></div>';}).join('')+'</div></div>':'';
+}
+
+/* ---------- Plan ---------- */
+function renderPlan(){
+  const el=$('#plan-list');if(!ready()){$('#bank').innerHTML='';el.innerHTML='<div class="panel">'+loadingHtml()+'</div>';return;}
+  $('#bank').innerHTML=bankHtml();
+  const tk=today(),we=addDays(tk,6),me=addDays(tk,29),logged=loggedByTask();
+  const list=Array.from(S.tasks.entries()).filter(e=>{const t=e[1];
+    if(planFilter==='done')return t.done;if(t.done)return false;
+    if(planFilter==='week')return t.due&&t.due<=we;if(planFilter==='month')return t.due&&t.due<=me;return true;})
+    .sort((x,y)=>planFilter==='done'?(y[1].doneAt||0)-(x[1].doneAt||0):(x[1].due||'9999').localeCompare(y[1].due||'9999'));
+  const planned=list.reduce((s,e)=>s+(e[1].est||0),0);
+  el.innerHTML='<div class="panel">'+(list.length?
+    (planFilter!=='done'&&planned?'<p class="muted small">'+list.length+' task'+(list.length===1?'':'s')+', <span class="mono">'+fmtMin(planned)+'</span> planned</p>':'')+
+    '<div class="list">'+list.map(e=>taskRow(e[1],e[0],logged,true)).join('')+'</div>':
+    emptyHtml(planFilter==='done'?'Nothing finished yet.':'No tasks here.',planFilter==='done'?'Tick a task when it is done and it moves here.':'Add a task with a due date and a time estimate. The estimate is what lets the log tell you which work runs over.'))+'</div>';
+}
+function taskSheet(id){
+  const t=id?S.tasks.get(id):{title:'',course:'',type:cfg().taskTypes[0]||'',est:'',due:''};if(!t)return;
+  const courses=Array.from(new Set(Array.from(S.tasks.values()).map(x=>x.course).filter(Boolean)));
+  openSheet('<h2 tabindex="-1">'+(id?'Edit task':'Add a task')+'</h2>'+
+    '<label class="field">What is it?<input id="f-title" value="'+esc(t.title)+'" placeholder="Read chapter 4" autocomplete="off"></label>'+
+    '<div class="grid2"><label class="field">Source<input id="f-course" list="courses" value="'+esc(t.course||'')+'" placeholder="Course, project, supervisor…" autocomplete="off"><datalist id="courses">'+courses.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist></label>'+
+    '<label class="field">Kind of work<select id="f-type">'+cfg().taskTypes.concat(t.type&&cfg().taskTypes.indexOf(t.type)<0?[t.type]:[]).map(x=>'<option'+(x===t.type?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label></div>'+
+    '<div class="grid2"><label class="field">Total time you expect it to take (hours)<input id="f-est" type="number" inputmode="decimal" min="0" step="0.25" value="'+(t.est?hrs(t.est):'')+'"></label>'+
+    '<label class="field">Due<input id="f-due" type="date" value="'+esc(t.due||'')+'"></label></div>'+
+    '<div id="f-chunks" class="bank"></div><div id="f-bank" class="bank"></div>'+
+    '<p class="small" id="f-err" role="alert" style="color:var(--bad)"></p>'+
+    '<div class="row"><button type="button" class="btn pri" data-act="task-save">'+(id?'Save changes':'Add task')+'</button><button type="button" class="btn" data-act="close">Cancel</button>'+
+    (id?'<button type="button" class="btn ghost" data-act="task-del">Delete task</button>':'')+'</div>',{kind:'task',id:id,chunks:id?getChunks(t):[],dropped:[]});chunkEd();bankBox();
+}
+
+/* ---------- rating sheets ---------- */
+let sheetCtx=null;
+function openSheet(html,ctx){sheetCtx=ctx;$('#sheet-body').innerHTML=html;$('#sheet').hidden=false;const h=$('#sheet-body h2');if(h)h.focus();}
+function closeSheet(){$('#sheet').hidden=true;$('#sheet-body').innerHTML='';sheetCtx=null;}
+function rateHtml(when){const c=cfg();const ms=Array.isArray(when)?when:c.measures.filter(m=>(m.when||[]).indexOf(when)>=0);
+  return ms.map(m=>'<fieldset class="rate" data-m="'+esc(m.id)+'"><legend>'+esc(Array.isArray(when)?m.name:(when==='before'&&m.askBefore)||(when==='moment'&&m.askNow)||m.ask||m.name)+'</legend><div class="pts">'+
+    Array.from({length:c.scale},(_,i)=>'<button type="button" class="pt" data-act="pt" data-v="'+(i+1)+'" aria-pressed="false">'+(i+1)+'</button>').join('')+
+    '</div><div class="anc"><span>'+esc(m.low||'')+'</span><span>'+esc(m.high||'')+'</span></div></fieldset>').join('');}
+function readRates(){const o={};document.querySelectorAll('#sheet-body .rate:not(.crate)').forEach(f=>{const b=f.querySelector('.pt[aria-pressed="true"]');if(b)o[f.dataset.m]=Number(b.dataset.v);});return o;}
+function beforeSheet(task){
+  if(active()){retroSheet(task);toast('A session is already running, so this logs past work instead.');return;}
+  const ci=task.taskId?chunkFor(task.taskId):null;
+  openSheet('<h2 tabindex="-1">Before you start</h2><p class="muted">'+esc(task.title)+'</p>'+
+    (ci?'<p class="small">'+[ci.n>1?'Chunk '+ci.idx+' of '+ci.n:'',ci.left>0?fmtMin(ci.left)+' planned':'planned time already used',ci.goal?'goal post: '+esc(ci.goal):''].filter(Boolean).join(' · ')+'</p>':'<p class="small muted">No planned length, so the clock counts time passed.</p>')+
+    rateHtml('before')+
+    '<div class="row"><button type="button" class="btn pri" data-act="begin">Start timer</button><button type="button" class="btn" data-act="close">Cancel</button><button type="button" class="btn ghost" data-act="retro-here">I already did this: log it</button></div>'+
+    '<p class="muted small">Tap a number for each. Leave one blank if you can\'t say.</p>',{kind:'before',task:task,chunk:ci});
+}
+function afterSheet(early){
+  const a=active();if(!a)return;const end=a.pausedAt||Date.now();let min=Math.max(1,Math.round(elapsedMs(a,end)/6e4));
+  if(early)min=Math.max(1,Math.min(min,a.planMin>0?a.planMin:cfg().cal.maxBlock));
+  openSheet('<h2 tabindex="-1">Session done</h2><p class="muted">'+esc(a.title)+'</p>'+
+    '<label class="field">'+(early?'Minutes you actually worked (the clock kept running)':'Minutes worked (edit if you forgot to stop the clock)')+'<input id="f-min" type="number" inputmode="numeric" min="1" value="'+min+'"></label>'+
+    chunkAfterHtml(a)+rateHtml('after')+
+    '<label class="field">Note (optional)<textarea id="f-note" rows="2" placeholder="What helped or got in the way?"></textarea></label>'+
+    (a.taskId?'<label class="row"><input type="checkbox" id="f-done"> The whole task is finished</label>':'')+
+    '<div class="row"><button type="button" class="btn pri" data-act="save-session">Save session</button><button type="button" class="btn" data-act="close">Keep working</button><button type="button" class="btn ghost" data-act="discard">Discard</button></div>',{kind:'after',end:end});
+  if(early){const m=$('#f-min');if(m){m.focus();m.select();}}
+}
+/* after a chunk: was it finished, how much of its goal post was reached, and extra time for the next chunk only */
+function chunkAfterHtml(a){const t=a.taskId?S.tasks.get(a.taskId):null;if(!t||!a.chunkId)return '';const ch=getChunks(t),k=ch.findIndex(x=>x.id===a.chunkId);if(k<0)return '';
+  const c=ch[k],multi=ch.length>1;if(!multi&&!c.goal)return '';const nx=ch[k+1]&&!ch[k+1].done?ch[k+1]:null;
+  return '<div class="bank" id="c-box" data-min="'+c.min+'"><p><b>'+(multi?'Chunk '+(k+1)+' of '+ch.length:'This task')+'</b> · '+fmtMin(c.min)+' planned'+(c.goal?' · goal post: '+esc(c.goal):'')+'</p>'+
+    (multi?'<fieldset class="rate crate" data-m="c-fin"><legend>Is this chunk finished?</legend><div class="pts words"><button type="button" class="pt" data-act="pt" data-v="yes" aria-pressed="true">Yes, move on</button><button type="button" class="pt" data-act="pt" data-v="no" aria-pressed="false">No, I will continue it</button></div></fieldset>':'')+
+    (c.goal?'<fieldset class="rate crate" data-m="c-pct" id="c-pctf"><legend>How much of the goal post did you reach?</legend><div class="pts">'+[0,25,50,75,100].map(v=>'<button type="button" class="pt" data-act="pt" data-v="'+v+'" aria-pressed="false">'+v+'%</button>').join('')+'</div></fieldset>':'')+
+    '<div id="c-extra-box" hidden><label class="field">'+(nx?'Extra minutes for chunk '+(k+2)+' (now '+fmtMin(nx.min)+')':'Minutes for a new chunk to finish it')+'<input id="c-extra" type="number" inputmode="numeric" min="0" step="15"></label>'+
+    (c.goal?'<label class="row"><input type="checkbox" id="c-carry" checked> Carry the unfinished goal post into '+(nx?'chunk '+(k+2):'it')+'</label>':'')+
+    '<p class="muted small">'+(nx?'Only the next chunk changes; the ones after it keep their length.':'One chunk is added after this one.')+' Set 0 to keep the plan as it is.</p></div></div>';}
+function selVal(m){const b=document.querySelector('#sheet-body .crate[data-m="'+m+'"] .pt[aria-pressed="true"]');return b?b.dataset.v:null;}
+function chunkBoxSync(){const box=$('#c-box');if(!box)return;const fin=selVal('c-fin'),pv=selVal('c-pct'),pf=$('#c-pctf');if(pf)pf.hidden=fin==='no';
+  const show=fin!=='no'&&pv!=null&&Number(pv)<100,ex=$('#c-extra-box'),inp=$('#c-extra');ex.hidden=!show;
+  if(show&&(!inp.value||inp.dataset.auto)){inp.value=Math.max(15,Math.round((100-Number(pv))/100*Number(box.dataset.min)/15)*15);inp.dataset.auto='1';}}
+function checkinSheet(){
+  openSheet('<h2 tabindex="-1">How are you right now?</h2>'+rateHtml('moment')+
+    '<label class="field">Note (optional)<textarea id="f-note" rows="2"></textarea></label>'+
+    '<div class="row"><button type="button" class="btn pri" data-act="save-checkin">Save check-in</button><button type="button" class="btn" data-act="close">Cancel</button></div>',{kind:'checkin'});
+}
+function weeklySheet(){
+  openSheet('<h2 tabindex="-1">Weekly screen</h2><p class="muted">Over the last 2 weeks, how often have you been bothered by the following?</p>'+
+    PHQ.map((q,i)=>'<fieldset class="rate" data-m="q'+i+'"><legend>'+esc(q)+'</legend><div class="pts words">'+
+      PHQ_OPT.map((o,v)=>'<button type="button" class="pt" data-act="pt" data-v="'+v+'" aria-pressed="false">'+esc(o)+'</button>').join('')+'</div></fieldset>').join('')+
+    '<p class="small" id="f-err" role="alert" style="color:var(--bad)"></p>'+
+    '<div class="row"><button type="button" class="btn pri" data-act="save-weekly">Save answers</button><button type="button" class="btn" data-act="close">Cancel</button></div>',{kind:'weekly'});
+}
+
+/* ---------- logging work after the fact ---------- */
+function retroSheet(task){
+  const c=cfg(),t=today(),ms=c.measures.filter(m=>(m.when||[]).some(w=>w==='before'||w==='after'));
+  openSheet('<h2 tabindex="-1">Log work you already did</h2><p class="muted">'+esc(task.title)+'</p>'+
+    '<div class="grid2"><label class="field">Day<input id="r-day" type="date" value="'+t+'" max="'+t+'"></label>'+
+    '<label class="field">From<input id="r-from" type="time"></label><label class="field">To<input id="r-to" type="time" value="'+hm(Date.now())+'"></label></div>'+
+    '<p class="small mono" id="r-dur"></p>'+
+    '<h3>Overall, across the whole session</h3>'+rateHtml(ms)+
+    '<label class="field">Note (optional)<textarea id="f-note" rows="2"></textarea></label>'+
+    (task.taskId?'<label class="row"><input type="checkbox" id="f-done"> This task is finished</label>':'')+
+    '<p class="small" id="f-err" role="alert" style="color:var(--bad)"></p>'+
+    '<div class="row"><button type="button" class="btn pri" data-act="save-retro">Save</button><button type="button" class="btn" data-act="close">Cancel</button></div>'+
+    '<p class="muted small">Ratings given from memory are stored as recalled and kept out of the before-and-after comparison.</p>',{kind:'retro',task:task});
+}
+function retroTimes(){const d=$('#r-day').value,a=$('#r-from').value,b=$('#r-to').value;if(!d||!a||!b)return{err:'Enter the day and both times.'};
+  const s=Date.parse(d+'T'+a+':00'),e=Date.parse(d+'T'+b+':00');if(!isFinite(s)||!isFinite(e))return{err:'Those times could not be read.'};
+  if(e<=s)return{err:'The end has to be after the start. Log work that ran past midnight as two entries.'};
+  if(e>Date.now()+6e4)return{err:'That ends in the future.'};return{s:s,e:e,min:Math.round((e-s)/6e4)};}
+function retroDur(){const el=$('#r-dur');if(!el)return;const r=retroTimes();el.textContent=r.err?'':'= '+fmtMin(r.min);}
+
+/* ---------- Google Calendar: read busy time, place work blocks in the gaps ---------- */
+const GC='Google Calendar';
+let mcp=null;
+const CAL={status:'off',code:'',at:0,tried:0,events:[],okCals:new Set(),from:0,to:0,busy:false,list:null};
+const TZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){return '';}})();
+const DENY=['bridge_setup','bridge_key','needs_reauth','server_not_connected','server_not_found','selection_required','blocked_by_policy','approval_required','not_in_manifest','consent_required','not_granted'];
+const calAvail=()=>Platform.calendarConfigured();
+function iso(ms){const d=new Date(ms);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':00';}
+function at(k,h){const q=k.split('-').map(Number);return new Date(q[0],q[1]-1,q[2],Math.floor(h),Math.round((h%1)*60)).getTime();}
+function hh(h){return Math.floor(h)+':'+pad(Math.round((h%1)*60));}
+function calMsg(code){switch(code){
+  case 'needs_reauth':case 'approval_required':return 'Google Calendar needs a click to reconnect; its access lasts an hour at a time. Setup > Google Calendar connection makes it last for months.';
+  case 'bridge_setup':return 'Your calendar script did not answer as expected. Check that it is deployed as a Web app with access for "Anyone" and that the Google Calendar API service is added.';
+  case 'bridge_key':return 'Your calendar script has a different key from this log. Copy the script again from Setup, paste it over the old one and deploy a new version.';
+  case 'bridge_unreachable':return 'Your calendar script could not be reached. Check the internet connection and try again.';
+  case 'not_granted':case 'consent_required':return 'Calendar access was not allowed. Press the button to allow it.';
+  case 'server_not_connected':case 'server_not_found':case 'not_in_manifest':return 'Google Calendar is not set up for this copy of the app: add a Google client ID in config.js (README.md shows how).';
+  case 'server_unavailable':case 'rate_limited':return 'Google Calendar did not answer. Try again in a minute.';
+  case 'tool_error':return 'Google Calendar refused the request.';
+  default:return 'The calendar could not be reached.';}}
+async function gcCall(tool,input,isRead){
+  try{return await Platform.calendar(tool,input);}
+  catch(e){if(isRead&&e&&e.retryable){await new Promise(z=>setTimeout(z,1200+Math.random()*1200));return await Platform.calendar(tool,input);}throw e;}}
+function normEvent(e,cal){if(!e||e.status==='cancelled')return null;const a=Date.parse(e.start&&e.start.dateTime),b=Date.parse(e.end&&e.end.dateTime);
+  if(!isFinite(a)||!isFinite(b)||b<=a)return null; // all-day events carry no clock time and never block hours
+  return{id:e.id,cal:cal,s:a,e:b,free:e.availability==='AVAILABILITY_FREE'||e.transparency==='transparent'};}
+function calIds(){const c=cfg().cal,ids=c.calendars.map(x=>x.id||''),tg=(c.target&&c.target.id)||'';if(ids.indexOf(tg)<0)ids.push(tg);return ids;}
+async function calRefresh(force){
+  if(!ready()||!calAvail()||CAL.busy)return;const c=cfg().cal;if(!c.on)return;
+  if(!force&&(CAL.status==='error'||CAL.status==='stale')&&DENY.indexOf(CAL.code)>=0)return; // a refusal is only retried when the viewer asks
+  CAL.busy=true;CAL.tried=Date.now();if(!CAL.at)CAL.status='loading';schedule();
+  const t=today();let last=addDays(t,27);S.tasks.forEach(x=>{if(!x.done&&x.due&&x.due>last)last=x.due;});if(last>addDays(t,60))last=addDays(t,60);
+  const from=at(t,0),to=at(addDays(last,1),0),evs=[],ok=new Set();let err=null;
+  for(const id of calIds()){
+    try{let token='',pages=0;
+      do{const input={startTime:iso(from),endTime:iso(to),pageSize:250,orderBy:'startTime'};if(TZ)input.timeZone=TZ;if(id)input.calendarId=id;if(token)input.pageToken=token;
+        const q=await gcCall('list_events',input,true);(q.events||[]).forEach(e=>{const n=normEvent(e,id);if(n)evs.push(n);});token=q.nextPageToken||'';
+      }while(token&&++pages<6);
+      ok.add(id);
+    }catch(e){err=e||{};if(DENY.indexOf(err.code)>=0)break;}
+  }
+  CAL.busy=false;
+  if(err&&DENY.indexOf(err.code)>=0){if(err.code==='approval_required'&&CAL.at){CAL.status='stale';CAL.code=err.code;}else{CAL.events=[];CAL.at=0;CAL.okCals=new Set();CAL.status='error';CAL.code=err.code;}}
+  else{if(ok.size){CAL.events=evs;CAL.okCals=ok;CAL.from=from;CAL.to=to;CAL.at=Date.now();}
+    CAL.status=err?(ok.size?'partial':'error'):'ok';CAL.code=err?(err.code||'upstream_error'):'';
+    if(ok.size)reconcile();}
+  schedule();bankBox();
+}
+/* calendar -> log: a placeholder moved in Google Calendar moves here; one deleted there is dropped here */
+function reconcile(){const byId={};CAL.events.forEach(e=>{byId[e.id]=e;});const now=Date.now();
+  const look=b=>{if(!b||b.x||b.e<CAL.from||b.s>=CAL.to||!CAL.okCals.has(b.cal||'')||(b.c&&now-b.c<12e4))return b;const ev=byId[b.id];if(!ev)return null;return ev.s!==b.s||ev.e!==b.e?Object.assign({},b,{s:ev.s,e:ev.e}):b;};
+  S.tasks.forEach((t,id)=>{let ch=false;
+    const nb=(t.blocks||[]).map(b=>{const r=look(b);if(r!==b)ch=true;return r;}).filter(Boolean);
+    const nc=(t.chunks||[]).map(x=>{if(!x.ev)return x;const r=look(x.ev);if(r===x.ev)return x;ch=true;return Object.assign({},x,{ev:r});});
+    if(ch)put('tasks',id,Object.assign({},t,{blocks:nb,chunks:nc}));});}
+function busyList(excl){const x=excl||{};return CAL.events.filter(e=>!e.free&&!x[e.id]).map(e=>[e.s,e.e]);}
+function subtract(wins,busy){const out=[],b=busy.slice().sort((x,y)=>x[0]-y[0]);
+  wins.forEach(w=>{let s=w[0];for(const x of b){if(x[1]<=s)continue;if(x[0]>=w[1])break;if(x[0]>s)out.push([s,x[0]]);s=Math.max(s,x[1]);if(s>=w[1])break;}if(s<w[1])out.push([s,w[1]]);});return out;}
+function wins(kind,fromKey,toKey){const c=cfg().cal,a=kind==='eve'?c.workEnd:c.workStart,b=kind==='pref'?c.workEnd:c.eveningEnd,out=[],now=Math.ceil(Date.now()/9e5)*9e5;
+  let k=fromKey,g=0;while(k<=toKey&&g++<70){const s=Math.max(at(k,a),now),e=at(k,b);if(e>s)out.push([s,e]);k=addDays(k,1);}return out;}
+function freeMin(kind,fromKey,toKey,busy){const mb=cfg().cal.minBlock*6e4;return subtract(wins(kind,fromKey,toKey),busy).filter(f=>f[1]-f[0]>=mb).reduce((a,f)=>a+(f[1]-f[0])/6e4,0);}
+/* each chunk goes whole into the earliest gap: working hours first, then working hours plus evening */
+function slotFor(len,from,endKey,occ){const c=cfg().cal;
+  for(const kind of ['pref','all'])for(const g of subtract(wins(kind,today(),endKey),occ)){const s=Math.ceil(Math.max(g[0],from)/3e5)*3e5,e=s+len*6e4;if(e<=g[1])return{s:s,e:e,eve:e>at(dkey(s),c.workEnd)};}
+  return null;}
+function planChunks(pieces,due,excl){const c=cfg().cal,end=due&&due>=today()?due:addDays(today(),6),occ=busyList(excl);let from=Date.now();
+  return{end:end,rows:pieces.map(p=>{const sl=slotFor(p.min,from,end,occ);if(sl){occ.push([sl.s,sl.e]);from=sl.e+c.breakMin*6e4;}return{p:p,slot:sl};})};}
+async function gcCreate(summary,b,remind,free){const c=cfg().cal,input={summary:summary,startTime:iso(b.s),endTime:iso(b.e),description:'Planned by Self-Study Log',useDefaultReminders:false};
+  if(remind!=null)input.overrideReminders=[{method:'popup',minutes:remind}];if(free)input.availability='AVAILABILITY_FREE';
+  if(TZ)input.timeZone=TZ;if(c.target&&c.target.id)input.calendarId=c.target.id;
+  const q=await gcCall('create_event',input),ev=q&&q.id?q:(q&&q.event)||{};if(!ev.id)throw{code:'upstream_error'};
+  return{id:ev.id,cal:(c.target&&c.target.id)||'',s:b.s,e:b.e,c:Date.now()};}
+async function gcUpdate(b,fields){const input=Object.assign({eventId:b.id},fields);if(b.cal)input.calendarId=b.cal;if(TZ&&fields.startTime)input.timeZone=TZ;return gcCall('update_event',input);}
+/* ---------- chunks ---------- */
+const newChunk=m=>({id:'c'+uid(),min:m,goal:'',done:false,ev:null});
+const sumMin=ch=>ch.reduce((a,x)=>a+(x.min||0),0);
+const hrs=m=>String(Math.round(m/60*100)/100);
+const chunkTitle=(pre,title,i,n)=>pre+title+(n>1?' ('+i+'/'+n+')':'');
+/* a task without chunks is one chunk as long as its estimate */
+function getChunks(t){if(Array.isArray(t.chunks)&&t.chunks.length)return clone(t.chunks);return t.est>0?[{id:'c0',min:t.est,goal:'',done:false,ev:null}]:[];}
+function spentOn(tid,cid){let m=0;S.sessions.forEach(x=>{if(x.taskId===tid&&(x.chunkId||'c0')===cid)m+=x.min||0;});return m;}
+function chunkFor(tid){const t=S.tasks.get(tid);if(!t)return null;const ch=getChunks(t),i=ch.findIndex(x=>!x.done);if(i<0)return null;const c=ch[i];
+  return{id:c.id,idx:i+1,n:ch.length,goal:c.goal||'',min:c.min,left:Math.round(c.min-spentOn(tid,c.id))};}
+function phOf(t){return(t.blocks||[]).filter(b=>!b.x).concat((t.chunks||[]).filter(x=>x.ev&&!x.done).map(x=>x.ev));}
+function calLocal(id,cal,s,e,free){const x=CAL.events.find(v=>v.id===id);if(x){x.s=s;x.e=e;x.free=free;}else CAL.events.push({id:id,cal:cal||'',s:s,e:e,free:free});}
+/* log -> calendar: one placeholder per open chunk; placeholders of removed chunks and old-style blocks are freed */
+async function applyChunkPlan(tid,rows,dropped){
+  let t=S.tasks.get(tid);if(!t)return;const now=Date.now(),chunks=clone(t.chunks||[]),n=chunks.length;let fail=null,placed=0,miss=0;
+  toast('Placing placeholders on your calendar…');
+  const rel=(dropped||[]).concat((t.blocks||[]).filter(b=>!b.x&&b.e>now)),relOk={};
+  for(const b of rel){try{await gcUpdate(b,{summary:'✖ '+t.title,availability:'AVAILABILITY_FREE'});relOk[b.id]=1;calLocal(b.id,b.cal,b.s,b.e,true);}catch(e){fail=e||{};break;}}
+  for(const r of rows){if(fail)break;const x=chunks.find(y=>y.id===r.p.id);if(!x)continue;const title=chunkTitle('⏱ ',t.title,chunks.indexOf(x)+1,n);
+    try{if(r.slot){if(x.ev&&x.ev.e>now){await gcUpdate(x.ev,{startTime:iso(r.slot.s),endTime:iso(r.slot.e),summary:title});x.ev=Object.assign({},x.ev,{s:r.slot.s,e:r.slot.e,c:Date.now()});}else x.ev=await gcCreate(title,r.slot,10);calLocal(x.ev.id,x.ev.cal,x.ev.s,x.ev.e,false);placed++;}
+      else{miss++;if(x.ev&&x.ev.e>now){await gcUpdate(x.ev,{summary:'✖ '+t.title,availability:'AVAILABILITY_FREE'});calLocal(x.ev.id,x.ev.cal,x.ev.s,x.ev.e,true);x.ev=null;}}}
+    catch(e){fail=e||{};}}
+  t=S.tasks.get(tid);if(t)put('tasks',tid,Object.assign({},t,{chunks:chunks,blocks:(t.blocks||[]).map(b=>relOk[b.id]?Object.assign({},b,{x:true}):b)}));
+  if(fail)toast(calMsg(fail.code)+' '+placed+' placeholder'+(placed===1?' was':'s were')+' placed. Check your calendar before trying again.');
+  else toast(placed+' placeholder'+(placed===1?'':'s')+' on your calendar'+(miss?', '+miss+' without a free slot':'')+'.');
+  schedule();setTimeout(()=>calRefresh(true),3000);
+}
+/* open chunks without a placeholder (the one a session used up, a chunk added after a session) get one */
+async function placeMissing(tid){const t=S.tasks.get(tid);if(!t||t.done||!t.useCal||!cfg().cal.on||!calAvail())return;if(!CAL.at)await calRefresh(true);if(!CAL.at)return;
+  const c=cfg().cal,chunks=getChunks(t),n=chunks.length,end=t.due&&t.due>=today()?t.due:addDays(today(),6),occ=busyList(),now=Date.now();let from=now,ch=false;
+  for(const x of chunks){if(x.done)continue;if(x.ev&&x.ev.e>now){from=Math.max(from,x.ev.e+c.breakMin*6e4);continue;}
+    const len=Math.round(x.min-spentOn(tid,x.id));if(len<5)continue;const sl=slotFor(len,from,end,occ)||slotFor(len,from,addDays(end,14),occ);if(!sl)continue;
+    try{x.ev=await gcCreate(chunkTitle('⏱ ',t.title,chunks.indexOf(x)+1,n),sl,10);calLocal(x.ev.id,x.ev.cal,sl.s,sl.e,false);occ.push([sl.s,sl.e]);from=sl.e+c.breakMin*6e4;ch=true;}catch(e){break;}}
+  if(ch){const cur=S.tasks.get(tid);if(cur)put('tasks',tid,Object.assign({},cur,{chunks:chunks}));}}
+/* keeps every placeholder clear of the running session and of each other; a placeholder also grows when its chunk gets extra time */
+async function reflow(firstTid){
+  const c=cfg().cal;if(!c.on||!calAvail())return;if(!CAL.at)await calRefresh(true);if(!CAL.at)return;
+  const now=Date.now(),a=active(),mov={};
+  S.tasks.forEach(t=>{if(t.done)return;(t.chunks||[]).forEach(x=>{if(!x.done&&x.ev&&x.ev.e>now)mov[x.ev.id]=1;});});
+  if(!Object.keys(mov).length)return;
+  const occ=busyList(mov),gap=c.breakMin*6e4,jobs=[];if(a&&a.ev)occ.push([a.ev.s,Math.max(a.ev.e,now)]);
+  Array.from(S.tasks.entries()).filter(e=>!e[1].done&&(e[1].chunks||[]).some(x=>x.ev&&mov[x.ev.id]))
+    .sort((x,y)=>x[0]===firstTid?-1:y[0]===firstTid?1:(x[1].due||'9999').localeCompare(y[1].due||'9999'))
+    .forEach(([tid,t])=>{let from=now;if(a&&a.ev&&a.taskId===tid)from=a.ev.e+gap;const end=t.due&&t.due>=today()?t.due:addDays(today(),6),n=t.chunks.length;
+      t.chunks.forEach((x,i)=>{if(x.done)return;if(!x.ev||!mov[x.ev.id]){if(x.ev)from=Math.max(from,x.ev.e+gap);return;}
+        const len=Math.max(15,Math.round(x.min-spentOn(tid,x.id))),s=x.ev.s,e=s+len*6e4,base=chunkTitle('',t.title,i+1,n);
+        if(s>=from&&!occ.some(o=>o[0]<e&&o[1]>s)){occ.push([s,e]);from=e+gap;if(e!==x.ev.e)jobs.push({tid:tid,cid:x.id,ev:x.ev,slot:{s:s,e:e},base:base});return;}
+        const sl=slotFor(len,from,end,occ)||slotFor(len,from,addDays(end,14),occ);
+        jobs.push({tid:tid,cid:x.id,ev:x.ev,slot:sl,base:base});if(sl){occ.push([sl.s,sl.e]);from=sl.e+gap;}});});
+  if(!jobs.length)return;
+  const res={};let moved=0,freed=0,fail=null;
+  for(const j of jobs){if(fail)break;
+    try{if(j.slot){await gcUpdate(j.ev,{startTime:iso(j.slot.s),endTime:iso(j.slot.e),summary:'⏱ '+j.base});res[j.cid]=Object.assign({},j.ev,{s:j.slot.s,e:j.slot.e,c:Date.now()});calLocal(j.ev.id,j.ev.cal,j.slot.s,j.slot.e,false);moved++;}
+      else{await gcUpdate(j.ev,{summary:'✖ '+j.base,availability:'AVAILABILITY_FREE'});res[j.cid]=null;calLocal(j.ev.id,j.ev.cal,j.ev.s,j.ev.e,true);freed++;}}
+    catch(e){fail=e||{};}}
+  const byTask={};jobs.forEach(j=>{if(j.cid in res)(byTask[j.tid]=byTask[j.tid]||{})[j.cid]=res[j.cid];});
+  Object.keys(byTask).forEach(tid=>{const t=S.tasks.get(tid);if(!t)return;put('tasks',tid,Object.assign({},t,{chunks:(t.chunks||[]).map(x=>x.id in byTask[tid]?Object.assign({},x,{ev:byTask[tid][x.id]}):x)}));});
+  if(fail)toast(calMsg(fail.code)+' Some placeholders could not be moved. Check your calendar.');
+  else toast((moved?moved+' placeholder'+(moved===1?'':'s')+' adjusted':'')+(moved&&freed?', ':'')+(freed?freed+' left without a free slot':'')+' so nothing overlaps.');
+  schedule();
+}
+/* one reusable calendar event carries the "time is up" pop-up, so alerts never pile up */
+async function setAlert(when,title){const c=cfg().cal;if(!c.on||c.alert===false||!calAvail()||when<=Date.now()+6e4)return;
+  const al=S.config.get('alert'),f={summary:'⏰ Time is up: '+title,startTime:iso(when),endTime:iso(when+5*6e4),useDefaultReminders:false,overrideReminders:[{method:'popup',minutes:0}],availability:'AVAILABILITY_FREE'};
+  if(al&&al.id){try{await gcUpdate(al,f);calLocal(al.id,al.cal,when,when+5*6e4,true);return;}catch(e){if(DENY.indexOf(e&&e.code)>=0)return;}}
+  try{const ev=await gcCreate(f.summary,{s:when,e:when+5*6e4},0,true);put('config','alert',{id:ev.id,cal:ev.cal});calLocal(ev.id,ev.cal,ev.s,ev.e,true);}catch(e){}}
+async function parkAlert(){const al=S.config.get('alert');if(!al||!al.id||!calAvail()||!cfg().cal.on)return;const t=Math.floor(Date.now()/6e4)*6e4-5*6e4;
+  try{await gcUpdate(al,{summary:'⏰ Self-Study Log timer (idle)',startTime:iso(t),endTime:iso(t+5*6e4),useDefaultReminders:false});calLocal(al.id,al.cal,t,t+5*6e4,true);}catch(e){}}
+/* session start: the chunk's placeholder moves to now (or a session event is made), then the alert and the other placeholders follow */
+async function calOnStart(st){
+  const c=cfg().cal;if(!c.on||!calAvail())return;let a=active();if(!a||a.start!==st)return;
+  const len=a.planMin!=null?Math.max(15,a.planMin):60,e=st+len*6e4,sum=chunkTitle('▶ ',a.title,a.chunkIdx,a.chunkN);
+  const t=a.taskId?S.tasks.get(a.taskId):null,chunks=t?getChunks(t):[],ch=chunks.find(x=>x.id===a.chunkId);let ev=null;
+  try{if(ch&&ch.ev&&ch.ev.e>Date.now()){await gcUpdate(ch.ev,{startTime:iso(st),endTime:iso(e),summary:sum});ev=Object.assign({},ch.ev,{s:st,e:e,c:Date.now()});}
+    else ev=await gcCreate(sum,{s:st,e:e},null);}
+  catch(err){toast(calMsg(err&&err.code)+' This session is not on your calendar.');return;}
+  calLocal(ev.id,ev.cal,ev.s,ev.e,false);
+  if(ch&&ch.ev){ch.ev=null;const cur=S.tasks.get(a.taskId);if(cur)put('tasks',a.taskId,Object.assign({},cur,{chunks:chunks}));}
+  a=active();
+  if(!a||a.start!==st){try{await gcUpdate(ev,{endTime:iso(Math.max(st+6e4,Date.now())),summary:sum.replace('▶','✅')});}catch(err){}return;}
+  put('config','active',Object.assign({},a,{ev:ev}));
+  if(a.planMin>0&&!a.pausedAt)await setAlert(st+a.planMin*6e4,a.title);
+  await reflow(a.taskId);
+}
+async function calOnResume(st){const a=active();if(!a||a.start!==st||!cfg().cal.on||!calAvail())return;const now=Date.now(),l=leftMs(a,now),e=now+Math.max(15*6e4,l!=null&&l>0?l:60*6e4);
+  if(a.ev){try{await gcUpdate(a.ev,{endTime:iso(e)});const ev=Object.assign({},a.ev,{e:e});calLocal(ev.id,ev.cal,ev.s,ev.e,false);const cur=active();if(cur&&cur.start===st)put('config','active',Object.assign({},cur,{ev:ev}));}catch(err){}}
+  if(l!=null&&l>0)await setAlert(now+l,a.title);
+  await reflow(a.taskId);}
+/* session end: the calendar keeps what really happened; the remaining placeholders are refilled and kept apart */
+async function calOnFinish(a,endTs,o){if(!cfg().cal.on||!calAvail())return;
+  await parkAlert();
+  if(a.ev){const e=Math.max(a.ev.s+6e4,endTs),f={endTime:iso(e),summary:chunkTitle(o.discard?'✖ ':'✅ ',a.title,a.chunkIdx,a.chunkN)};if(o.discard)f.availability='AVAILABILITY_FREE';
+    try{await gcUpdate(a.ev,f);calLocal(a.ev.id,a.ev.cal,a.ev.s,e,!!o.discard);}catch(err){toast(calMsg(err&&err.code)+' Your calendar was not updated for this session.');}}
+  if(!a.taskId)return;
+  if(o.taskDone){await releaseBlocks(a.taskId,'✅ ',true);return;}
+  await placeMissing(a.taskId);await reflow(a.taskId);schedule();}
+/* a finished or deleted task frees its upcoming placeholders: retitled and set to free, never deleted */
+async function releaseBlocks(id,prefix,persist,extra){
+  const t=S.tasks.get(id);if(!t||!calAvail()||!cfg().cal.on)return;
+  const now=Date.now(),fut=(t.blocks||[]).filter(b=>!b.x&&b.e>now).concat((t.chunks||[]).filter(x=>x.ev&&x.ev.e>now).map(x=>x.ev),extra||[]);if(!fut.length)return;const ok={};
+  for(const b of fut){try{await gcUpdate(b,{summary:prefix+t.title,availability:'AVAILABILITY_FREE'});ok[b.id]=1;calLocal(b.id,b.cal,b.s,b.e,true);}catch(e){break;}}
+  if(persist){const cur=S.tasks.get(id);if(cur)put('tasks',id,Object.assign({},cur,{blocks:(cur.blocks||[]).map(b=>ok[b.id]?Object.assign({},b,{x:true}):b),chunks:(cur.chunks||[]).map(x=>x.ev&&ok[x.ev.id]?Object.assign({},x,{ev:null}):x)}));}
+  if(Object.keys(ok).length<fut.length)toast('Some calendar placeholders for this task could not be freed. Check your calendar.');
+  schedule();
+}
+function calNote(){if(CAL.status!=='error'&&CAL.status!=='partial'&&CAL.status!=='stale')return '';
+  const ask=['not_in_manifest','approval_required','consent_required','not_granted'].indexOf(CAL.code)>=0;
+  return '<div class="note">'+(CAL.status==='partial'?'Some calendars could not be read, so free time may be overstated. ':CAL.status==='stale'?'Calendar last read '+ago(CAL.at)+'. ':'')+esc(calMsg(CAL.code))+' <button type="button" class="btn sm" data-act="cal-refresh">'+(ask?'Reconnect calendar':'Try again')+'</button></div>';}
+function bankHtml(){
+  if(!calAvail())return '<div class="panel"><h3>Time bank</h3><p class="empty">Calendar sync is not available in this view.</p></div>';
+  const c=cfg().cal;
+  if(!c.on)return '<div class="panel"><h3>Time bank</h3><p class="muted" style="max-width:65ch">Connect Google Calendar to see how many free hours you have before a due date, and to place new tasks into the gaps between '+hh(c.workStart)+' and '+hh(c.workEnd)+'.</p><div><button type="button" class="btn pri" data-act="cal-connect">Connect Google Calendar</button></div></div>';
+  const head='<div class="head"><h3>Time bank · next 7 days</h3><span class="row"><span class="muted small">'+(CAL.busy?'reading calendar…':CAL.at?'calendar read '+ago(CAL.at):'')+'</span><button type="button" class="btn sm" data-act="cal-refresh">Refresh</button></span></div>';
+  if(!CAL.at)return '<div class="panel">'+head+(calNote()||'<p class="empty">Reading your calendar…</p>')+'</div>';
+  const t=today(),busy=busyList(),win=(c.workEnd-c.workStart)*60||1,now=Date.now();let tp=0,te=0,rows='',planned=0;
+  for(let i=0;i<7;i++){const k=addDays(t,i),pf=freeMin('pref',k,k,busy),ef=freeMin('eve',k,k,busy);tp+=pf;te+=ef;
+    rows+='<div class="hb bk" title="'+esc(labelDay(k))+': '+fmtMin(pf)+' free in working hours, '+fmtMin(ef)+' in the evening"><span class="l">'+esc(new Date(dparse(k)).toLocaleDateString(undefined,{weekday:'short',day:'numeric'}))+'</span><span class="tr"><i style="width:'+Math.min(100,pf/win*100).toFixed(1)+'%"></i></span><span class="v">'+fmtMin(pf)+'</span><span class="n">+'+fmtMin(ef)+' eve</span></div>';}
+  const lim=at(addDays(t,7),0);S.tasks.forEach(x=>{phOf(x).forEach(b=>{if(b.e>now&&b.s<lim)planned+=(b.e-b.s)/6e4;});});
+  return '<div class="panel">'+head+calNote()+'<p class="small" style="max-width:65ch">Free between '+hh(c.workStart)+' and '+hh(c.workEnd)+' after everything on your calendar: <span class="mono">'+fmtMin(tp)+'</span>, plus <span class="mono">'+fmtMin(te)+'</span> in the evening until '+hh(c.eveningEnd)+'.'+(planned?' Placeholders already on your calendar: <span class="mono">'+fmtMin(planned)+'</span>.':'')+'</p>'+rows+'</div>';
+}
+/* the chunk editor inside the task form: one piece by default, or chunks of the length you choose, each with an optional goal post */
+function chunkEd(){const el=$('#f-chunks');if(!el||!sheetCtx||sheetCtx.kind!=='task')return;const ch=sheetCtx.chunks,est=$('#f-est'),multi=ch.length>1;
+  est.readOnly=multi;if(multi)est.value=hrs(sumMin(ch));
+  let h='<div class="head"><h3>Chunks</h3><span class="row"><span class="muted small">Split evenly into</span>'+[2,3,4].map(n=>'<button type="button" class="btn sm" data-act="ch-split" data-v="'+n+'">'+n+'</button>').join('')+'<button type="button" class="btn sm" data-act="ch-add">Add chunk</button></span></div>';
+  if(!ch.length)h+='<p class="muted small">Enter the total time first. The task is one piece by default; split it to work in chunks, each with its own goal post.</p>';
+  else h+='<div class="chunks">'+ch.map((x,i)=>x.done?'<div class="chk"><span class="mono small">'+(i+1)+'</span><span class="done">'+fmtMin(x.min)+' · done'+(isNum(x.pct)?' · goal post '+x.pct+'%':'')+(x.goal?' · '+esc(x.goal):'')+'</span></div>':
+      '<div class="chk" data-i="'+i+'"><span class="mono small">'+(i+1)+'</span><input class="in" type="number" inputmode="decimal" min="0.25" step="0.25" data-ch="min" value="'+hrs(x.min)+'" aria-label="Hours for chunk '+(i+1)+'"'+(multi?'':' disabled title="Follows the total time"')+'><input class="in" data-ch="goal" value="'+esc(x.goal||'')+'" placeholder="Goal post (optional)" aria-label="Goal post for chunk '+(i+1)+'">'+
+      (multi?'<button type="button" class="btn sm ghost" data-act="ch-del" aria-label="Remove chunk '+(i+1)+'">✕</button>':'<span></span>')+'</div>').join('')+'</div>'+
+    '<p class="muted small" id="ch-sum">'+chSum()+'</p>';
+  el.innerHTML=h;}
+function chSum(){const ch=sheetCtx.chunks;return ch.length>1?ch.length+' chunks, '+fmtMin(sumMin(ch))+' in total. Hours per chunk; the total follows them.':'One piece of '+fmtMin(sumMin(ch))+'.';}
+function estInput(){if(!sheetCtx||sheetCtx.kind!=='task')return;const ch=sheetCtx.chunks;if(ch.length>1)return;const m=Math.round((parseFloat($('#f-est').value)||0)*60);
+  if(m>0){if(!ch.length)ch.push(newChunk(m));else if(!ch[0].done)ch[0].min=m;}
+  else if(ch.length===1&&!ch[0].done&&!ch[0].ev&&!ch[0].goal)ch.length=0;
+  chunkEd();}
+/* the time-bank box inside the task form: free time before the due date and where each chunk's placeholder would go */
+function bankBox(){
+  const el=$('#f-bank');if(!el||!sheetCtx||sheetCtx.kind!=='task')return;
+  const c=cfg().cal;sheetCtx.plan=null;
+  if(!calAvail()){el.innerHTML='';return;}
+  if(!c.on){el.innerHTML='<p class="muted small">Connect Google Calendar on the Plan tab to see your free time before the due date and to keep placeholders for this task on your calendar.</p>';return;}
+  if(!CAL.at){el.innerHTML='<p class="muted small">'+(CAL.status==='error'?esc(calMsg(CAL.code)):'Reading your calendar…')+'</p>';return;}
+  const was=$('#f-plan'),keepTick=was?was.checked:null;
+  const due=$('#f-due').value||'',t=today(),old=sheetCtx.id?S.tasks.get(sheetCtx.id):null,excl={};
+  if(old){(old.blocks||[]).forEach(b=>{if(!b.x)excl[b.id]=1;});(old.chunks||[]).forEach(x=>{if(x.ev)excl[x.ev.id]=1;});}
+  const wk=addDays(t,6),soon=due&&due>=t&&due<=wk,bEnd=soon?due:wk,busy=busyList(excl),pf=freeMin('pref',t,bEnd,busy),ef=freeMin('eve',t,bEnd,busy),bLim=at(addDays(bEnd,1),0);
+  let h='<p><b>Time bank</b> '+(soon?'until the due date, '+esc(labelDay(due)):'for the next 7 days')+': <span class="mono">'+fmtMin(pf)+'</span> free between '+hh(c.workStart)+' and '+hh(c.workEnd)+', plus <span class="mono">'+fmtMin(ef)+'</span> in the evening.</p>';
+  const ch=sheetCtx.chunks,n=ch.length,run=active(),pieces=ch.map((x,i)=>({id:x.id,i:i,min:x.done||(run&&run.taskId===sheetCtx.id&&run.chunkId===x.id)?0:Math.max(0,Math.round(x.min-(sheetCtx.id?spentOn(sheetCtx.id,x.id):0)))})).filter(p=>p.min>=5);
+  if(pieces.length){const q=planChunks(pieces,due,excl),need=pieces.reduce((a,p)=>a+p.min,0),miss=q.rows.filter(r=>!r.slot).length,eve=q.rows.some(r=>r.slot&&r.slot.eve);sheetCtx.plan=q;
+    h+='<p>'+(sheetCtx.id&&loggedByTask().get(sheetCtx.id)?'Still to do: ':'This task needs ')+'<span class="mono">'+fmtMin(need)+'</span>'+(pieces.length>1?' in '+pieces.length+' chunks':'')+'. '+
+      (miss?'<span class="pill bad">does not fit</span> '+miss+' of them '+(miss===1?'has':'have')+' no free stretch long enough before the due date. Shorter chunks fit more easily.':
+       eve?'<span class="pill warn">runs late</span> Some of it runs into the evening.':'That leaves <span class="mono">'+fmtMin(Math.max(0,pf-q.rows.reduce((a2,r)=>a2+(r.slot&&r.slot.s<bLim?(Math.min(r.slot.e,bLim)-r.slot.s)/6e4:0),0)))+'</span> free in working hours '+(soon?'before the due date':'this week')+'.')+'</p>'+
+      '<ul class="blocks">'+q.rows.map(r=>'<li>'+(n>1?'Chunk '+(r.p.i+1)+' · ':'')+fmtMin(r.p.min)+' → '+(r.slot?esc(new Date(r.slot.s).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))+' '+hm(r.slot.s)+'–'+hm(r.slot.e)+(r.slot.eve?' · evening':''):'no free slot')+'</li>').join('')+'</ul>'+
+      '<label class="row"><input type="checkbox" id="f-plan"'+((keepTick===null?(old?!!old.useCal:true):keepTick)?' checked':'')+'> Keep placeholders for this task on my calendar</label>'+
+      '<p class="muted small">Placeholders only hold time. When you start a session it takes its placeholder\'s spot, and later placeholders move so nothing overlaps.</p>';
+  }else if(n&&ch.every(x=>x.done))h+='<p class="muted">Every chunk is done, so there is nothing left to place.</p>';
+  el.innerHTML=h;
+}
+function numField(label,key,val,min,max){return '<label class="field">'+label+'<input type="number" min="'+min+'" max="'+max+'" data-chg="'+key+'" value="'+val+'"></label>';}
+function setCalHtml(){
+  if(!calAvail())return '<p class="empty">Calendar sync is not available in this view.</p>';
+  const c=cfg().cal,tg=(c.target&&c.target.id)||'';
+  let h='<div class="row"><span class="pill'+(c.on?'':' warn')+'">'+(c.on?'connected':'not connected')+'</span>'+(c.on?'<button type="button" class="btn sm" data-act="cal-off">Turn off</button>':'<button type="button" class="btn sm pri" data-act="cal-connect">Connect Google Calendar</button>')+'</div>'+
+    '<div class="grid2" style="margin-top:10px">'+numField('Working hours start (hour of day)','cal-ws',c.workStart,0,23)+numField('Working hours end','cal-we',c.workEnd,1,24)+numField('Evening overflow ends','cal-ee',c.eveningEnd,1,24)+numField('Ask “still working?” after (minutes, unplanned sessions)','cal-mb',c.maxBlock,15,480)+numField('Gap between placeholders (minutes)','cal-br',c.breakMin,0,120)+'</div>'+
+    '<label class="row" style="margin-top:10px"><input type="checkbox" data-chg="cal-alert"'+(c.alert!==false?' checked':'')+'> Calendar alert when a session\'s planned time is up</label>';
+  if(CAL.list)h+='<div style="margin-top:10px">'+CAL.list.map(x=>'<div class="calrow"><label class="row"><input type="checkbox" data-chg="cal-busy" value="'+esc(x.id)+'"'+(c.calendars.some(y=>y.id===x.id)?' checked':'')+'> '+esc(x.name)+'</label><label class="row muted"><input type="radio" name="cal-target" data-chg="cal-target" value="'+esc(x.id)+'"'+(tg===x.id?' checked':'')+'> new blocks go here</label></div>').join('')+'</div><p class="muted small">Ticked calendars count as busy time.</p>';
+  else h+='<p class="small muted" style="margin-top:10px">Busy time is read from: '+(c.calendars.length?esc(c.calendars.map(x=>x.name||'a calendar').join(', ')):'your main calendar')+'. New blocks go to: '+esc((c.target&&c.target.name)||'your main calendar')+'.</p>'+(c.on?'<div><button type="button" class="btn sm" data-act="cal-list">Choose calendars</button></div>':'');
+  return h;
+}
+
+/* ---------- Insights ---------- */
+function hbars(rows,fmt,max,note){max=max||Math.max.apply(null,rows.map(r=>r.v).concat([0]))||1;
+  return rows.map(r=>'<div class="hb" title="'+esc(r.label)+': '+esc(fmt(r.v))+', '+r.n+' '+(note||'entries')+'"><span class="l">'+esc(r.label)+'</span><span class="tr"><i style="width:'+Math.max(0,Math.min(100,r.v/max*100)).toFixed(1)+'%"></i></span><span class="v">'+esc(fmt(r.v))+'</span><span class="n">n='+r.n+'</span></div>').join('');}
+function divbars(rows,lim){return rows.map(r=>{const w=Math.min(50,Math.abs(r.v)/lim*50).toFixed(1);
+  return '<div class="hb" title="'+esc(r.label)+': '+(r.v>0?'+':'')+f1(r.v)+' points across '+r.n+' sessions"><span class="l">'+esc(r.label)+'</span><span class="tr div"><i class="'+(r.v<0?'neg':'')+'" style="'+(r.v<0?'left:auto;right:50%':'left:50%')+';width:'+w+'%"></i></span><span class="v">'+(r.v>0?'+':'')+f1(r.v)+'</span><span class="n">n='+r.n+'</span></div>';}).join('');}
+function xLabels(days,l,w,y){const n=days.length,step=Math.max(1,Math.ceil(n/(chartW()<480?4:6)));let g='';
+  for(let i=n-1;i>=0;i-=step)g+='<text x="'+(l+i*w+w/2).toFixed(1)+'" y="'+y+'" text-anchor="middle" class="ax">'+esc(labelDay(days[i].k))+'</text>';return g;}
+function chartW(){const w=$('#insights').clientWidth-34;return Math.max(300,Math.min(640,w||640));}
+function svgBars(days){const W=chartW(),H=170,l=38,r=26,t=10,b=24,pw=W-l-r,ph=H-t-b;
+  const top=Math.ceil(Math.max(60,Math.max.apply(null,days.map(d=>d.min)))/60)*60,n=days.length,w=pw/n,bw=Math.max(1.5,Math.min(26,w-2));let g='';
+  [0,top/2,top].forEach(v=>{const y=t+ph-(v/top)*ph,hh=v/60;g+='<line x1="'+l+'" x2="'+(W-r)+'" y1="'+y+'" y2="'+y+'" class="grid"/><text x="'+(l-6)+'" y="'+(y+4)+'" text-anchor="end" class="ax">'+(hh%1?hh.toFixed(1):hh)+'h</text>';});
+  days.forEach((d,i)=>{if(!d.min)return;const h=Math.max(2,(d.min/top)*ph),x=l+i*w+(w-bw)/2,y=t+ph-h,rr=Math.min(3,bw/2,h);
+    g+='<path class="bar" d="M'+x.toFixed(1)+','+(t+ph)+'V'+(y+rr).toFixed(1)+'Q'+x.toFixed(1)+','+y.toFixed(1)+' '+(x+rr).toFixed(1)+','+y.toFixed(1)+'H'+(x+bw-rr).toFixed(1)+'Q'+(x+bw).toFixed(1)+','+y.toFixed(1)+' '+(x+bw).toFixed(1)+','+(y+rr).toFixed(1)+'V'+(t+ph)+'Z"><title>'+esc(labelDay(d.k))+': '+fmtMin(d.min)+' in '+d.n+' session'+(d.n===1?'':'s')+'</title></path>';});
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Time worked per day">'+g+xLabels(days,l,w,H-6)+'</svg>';}
+function svgTrend(days,id,name){const sc=cfg().scale,W=chartW(),H=190,l=38,r=58,t=12,b=24,pw=W-l-r,ph=H-t-b,n=days.length,w=pw/n;
+  const Y=v=>t+ph-((v-1)/(sc-1))*ph,X=i=>l+i*w+w/2;
+  const vals=days.map(d=>isNum(d.m[id])?d.m[id]:null),have=vals.filter(v=>v!=null);if(!have.length)return null;
+  const avg=mean(have);let g='';
+  [1,(sc+1)/2,sc].forEach(v=>{g+='<line x1="'+l+'" x2="'+(W-r)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" class="grid"/><text x="'+(l-6)+'" y="'+(Y(v)+4)+'" text-anchor="end" class="ax">'+v+'</text>';});
+  g+='<line class="base" x1="'+l+'" x2="'+(W-r)+'" y1="'+Y(avg).toFixed(1)+'" y2="'+Y(avg).toFixed(1)+'"/><text x="'+(W-r+6)+'" y="'+(Y(avg)+4).toFixed(1)+'" class="ax">avg '+f1(avg)+'</text>';
+  let path='',last=null;
+  vals.forEach((_,i)=>{const win=vals.slice(Math.max(0,i-6),i+1).filter(v=>v!=null);if(win.length<2)return;const m=mean(win);path+=(path?'L':'M')+X(i).toFixed(1)+','+Y(m).toFixed(1);last={i:i,m:m};});
+  vals.forEach((v,i)=>{if(v!=null)g+='<circle class="dot" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.5"><title>'+esc(labelDay(days[i].k))+': '+esc(name)+' '+f1(v)+' (mean of '+days[i].cnt[id]+')</title></circle>';});
+  if(path)g+='<path class="roll" d="'+path+'"/>';
+  if(last)g+='<circle class="end" cx="'+X(last.i).toFixed(1)+'" cy="'+Y(last.m).toFixed(1)+'" r="4.5"><title>7-day average: '+f1(last.m)+'</title></circle>';
+  return{svg:'<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(name)+' per day">'+g+xLabels(days,l,w,H-6)+'</svg>',avg:avg,last:last?last.m:null,n:have.length};}
+
+/* habit heat map: weeks as columns, Monday at the top; which habits it counts is the viewer's choice */
+let heatSel=null;
+try{const v=JSON.parse(localStorage.getItem('ssl-heat')||'null');if(Array.isArray(v))heatSel=v;}catch(e){}
+function saveHeat(){try{localStorage.setItem('ssl-heat',JSON.stringify(heatSel));}catch(e){}}
+function heatHtml(){
+  const c=cfg();if(!c.habits.length)return '';
+  const ids=c.habits.map(h=>h.id);let sel=heatSel?ids.filter(i=>heatSel.indexOf(i)>=0):ids;if(!sel.length)sel=ids;
+  const all=sel.length===ids.length,W=chartW()<480?18:26,t=today(),first=firstKey()||t;
+  let k=addDays(weekStart(t),-(W-1)*7),lastM='';
+  let cells='<span></span>'+['M','','W','','F','',''].map(d=>'<span class="hl">'+d+'</span>').join('');
+  for(let w=0;w<W;w++){
+    const mo=new Date(dparse(k)).toLocaleDateString(undefined,{month:'short'});
+    cells+='<span class="hm">'+(mo!==lastM&&w<W-1&&(w>0||new Date(dparse(k)).getDate()<=14)?esc(mo):'')+'</span>';lastM=mo;
+    for(let d=0;d<7;d++){const day=addDays(k,d);
+      if(day>t){cells+='<i class="f"></i>';continue;}
+      const rec=S.days.get(day),hs=(rec&&rec.habits)||{},n=sel.filter(i=>hs[i]).length,lv=n?Math.ceil(n/sel.length*4):0;
+      const tip=labelDay(day)+': '+(day<first?'before your first entry':sel.length===1?(n?'done':'not done'):n+' of '+sel.length+' habits');
+      cells+='<i class="'+(day<first?'x':'l'+lv)+'" title="'+esc(tip)+'"></i>';}
+    k=addDays(k,7);}
+  const one=sel.length===1?c.habits.find(h=>h.id===sel[0]).name:null;
+  return '<div class="chips"><button type="button" class="chip sm" data-act="heat-all" aria-pressed="'+all+'">All habits</button>'+
+    c.habits.map(h=>'<button type="button" class="chip sm" data-act="heat" data-id="'+esc(h.id)+'" aria-pressed="'+(!all&&sel.indexOf(h.id)>=0)+'">'+esc(h.name)+'</button>').join('')+'</div>'+
+    '<div class="heat" style="grid-template-columns:1.1rem repeat('+W+',minmax(0,1fr))" role="img" aria-label="Habit heat map, last '+W+' weeks">'+cells+'</div>'+
+    '<div class="key">'+(one?'<span class="sws"><i class="l0"></i></span><span>not done</span><span class="sws"><i class="l4"></i></span><span>done</span>':
+      '<span>None</span><span class="sws"><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i></span><span>All '+sel.length+' done</span>')+
+    '<span>Last '+W+' weeks, this week on the right. Pick habits above to change what is counted.</span></div>';
+}
+
+/* ---------- 4-day check-up: the last 4 days against the 28 days before, in units of your own variation ---------- */
+const DIR={mood:-1,energy:-1,focus:-1,progress:-1,tension:1,demand:1}; // which direction is the worrying one
+function expGap(sess,id){const a=[],b=[];sess.forEach(x=>{const u=x.pre&&x.pre[id],v=x.post&&x.post[id];if(!x.retro&&isNum(u)&&isNum(v)){a.push(u);b.push(v);}});return{n:a.length,exp:mean(a),act:mean(b)};}
+function goalStats(sess){const v=sess.map(x=>x.goalPct).filter(isNum);return{n:v.length,avg:mean(v),full:v.filter(x=>x>=100).length};}
+function checkup(){
+  const t=today(),first=firstKey(),c=cfg();if(!first)return null;
+  const clip=a=>a.filter(d=>d.k>=first),rec=clip(buildDays(addDays(t,-3),t)),base=clip(buildDays(addDays(t,-31),addDays(t,-4))),rows=[];
+  const add=(key,label,get,fmt,floor,dir)=>{const r=rec.map(get).filter(isNum),b=base.map(get).filter(isNum);
+    const o={key:key,label:label,fmt:fmt,dir:dir,nR:r.length,nB:b.length,rec:mean(r),base:mean(b),sd:null,z:null,flag:''};
+    if(r.length>=2&&b.length>=7){o.sd=Math.max(sd(b)||0,floor);o.z=(o.rec-o.base)/o.sd;o.flag=o.z<=-1?'low':o.z>=1?'high':'';}
+    rows.push(o);};
+  c.measures.forEach(m=>add(m.id,m.name,d=>d.m[m.id],f1,.4,DIR[m.id]||0));
+  add('sleep','Hours slept',d=>d.day.sleepH,v=>f1(v)+' h',.5,-1);
+  add('work','Work per day',d=>d.min,fmtMin,20,0);
+  if(c.habits.length)add('habits','Habits done per day',d=>{const h=d.day.habits||{};return c.habits.filter(x=>h[x.id]).length;},f1,.5,-1);
+  return{rows:rows,rec:rec,base:base};
+}
+function advice(ck){
+  const A=[],by={},t=today(),first=firstKey();ck.rows.forEach(r=>{by[r.key]=r;});
+  const bad=k=>{const r=by[k];return!!(r&&r.flag&&((r.flag==='low'&&r.dir<0)||(r.flag==='high'&&r.dir>0)));};
+  const from=addDays(t,-59)<first?first:addDays(t,-59),long=buildDays(from,t),f0=dparse(from),sess=Array.from(S.sessions.values()).filter(x=>x.start>=f0);
+  const as=assoc(long,sess),hs=habitStats(long).filter(x=>x.nOn>=5&&x.nOff>=5).sort((a,b)=>(b.on-b.off)-(a.on-a.off)),sl=by.sleep;
+  if(bad('sleep')||((bad('energy')||bad('focus'))&&sl&&sl.rec!=null&&sl.base!=null&&sl.rec<sl.base-.3))
+    A.push({h:'Sleep',t:'You averaged '+f1(sl.rec)+' h over the last 4 nights against your usual '+f1(sl.base)+' h.'+(as[0].r!=null&&as[0].r>=.3?' In your own data, more sleep goes with higher focus the next day (r = '+as[0].r.toFixed(2)+', '+as[0].n+' days).':'')+' Hold one fixed bedtime for the next three nights before changing anything else.'});
+  if(bad('mood')){const b=hs[0];
+    if(b&&b.on-b.off>=.4){const did=ck.rec.filter(d=>d.day.habits&&d.day.habits[b.h.id]).length;
+      A.push({h:'Mood',t:'Your mood is below your usual. The habit most tied to your better days is “'+esc(b.h.name)+'”: mood averages '+f1(b.on)+' on days with it and '+f1(b.off)+' without. You did it on '+did+' of the last '+ck.rec.length+' days.'});}
+    else A.push({h:'Mood',t:'Your mood is below your usual and no habit stands out in your data yet. Physical activity, daylight and time with other people have the most consistent research support, so keep those three going while the data builds.'});
+    if(by.mood.z<=-1.5)A.push({h:'Wellbeing',w:1,t:'This is a large drop for you. Do the weekly screen today, and if low mood lasts two weeks, talk with your doctor or campus counselling.'});}
+  if(bad('energy')||bad('focus')){const tb=byBlock(sess,'focus').filter(x=>x.n>=3).sort((a,b)=>b.v-a.v);
+    if(tb.length>=2&&tb[0].v-tb[tb.length-1].v>=.3)A.push({h:'Energy',t:'Put the hardest task in the '+tb[0].label.toLowerCase()+': your focus averages '+f1(tb[0].v)+' then, against '+f1(tb[tb.length-1].v)+' in the '+tb[tb.length-1].label.toLowerCase()+'.'});}
+  if(bad('tension')){const et=effect(sess,'tension').filter(x=>x.n>=3).sort((a,b)=>b.v-a.v)[0],w=by.work;
+    A.push({h:'Tension',t:(et&&et.v>=.4?esc(et.label)+' sessions raise your tension the most (+'+f1(et.v)+' on average, n='+et.n+'). Split them into shorter blocks and open each one with a small, concrete first step. ':'')+(w&&w.flag==='high'?'You also worked '+fmtMin(w.rec)+' a day against your usual '+fmtMin(w.base)+'. ':'')+'A few minutes of slow breathing or a short walk between blocks reduces tension in controlled studies, and your after-session ratings will show whether it works for you.'});}
+  const ov=estimation(sess).byType.filter(x=>x.n>=3&&x.v>=1.15).slice(0,2);
+  if(ov.length)A.push({h:'Time estimates',t:'Multiply '+ov.map(x=>esc(x.label)+' estimates by '+x.v.toFixed(1)+' (median of '+x.n+' finished tasks)').join(', and ')+'. Estimating from how long similar tasks took beats estimating from the plan.'});
+  const dg=expGap(sess,'demand');
+  if(dg.n>=5&&dg.act-dg.exp>=.5)A.push({h:'Expectations',t:'Work turns out more demanding than you predict ('+f1(dg.act)+' against '+f1(dg.exp)+' expected, n='+dg.n+'). Leave slack after demanding blocks instead of booking them back to back.'});
+  return A;
+}
+function checkupHtml(){
+  const ck=checkup();if(!ck)return '';
+  const t=today(),known=ck.rows.some(r=>r.z!=null);
+  const st=r=>{if(r.z==null)return '<span class="muted">'+(r.nB<7?'needs '+(7-r.nB)+' more day'+(7-r.nB===1?'':'s')+' of history':'too few entries in the last 4 days')+'</span>';
+    if(!r.flag)return 'in range';
+    const worry=(r.flag==='low'&&r.dir<0)||(r.flag==='high'&&r.dir>0);
+    return '<span class="pill'+(worry?' warn':'')+'">'+(r.flag==='low'?'below':'above')+' usual</span>';};
+  const A=known?advice(ck):[];
+  return '<div class="panel" id="checkup"><div class="head"><h3>4-day check-up</h3><span class="muted small">'+esc(labelDay(addDays(t,-3)))+' to '+esc(labelDay(t))+', against the 4 weeks before</span></div>'+
+    '<div class="scroll"><table class="tbl"><thead><tr><th>Measure</th><th>Last 4 days</th><th>Your usual</th><th>Status</th></tr></thead><tbody>'+
+    ck.rows.map(r=>'<tr><td>'+esc(r.label)+'</td><td class="num">'+(r.rec==null?'–':esc(r.fmt(r.rec)))+'</td><td class="num">'+(r.base==null?'–':esc(r.fmt(r.base))+(r.sd!=null?' ± '+esc(r.fmt(r.sd)):''))+'</td><td>'+st(r)+'</td></tr>').join('')+'</tbody></table></div>'+
+    (known?'<h3>What to try</h3>'+(A.length?'<ul class="find">'+A.map(a=>'<li'+(a.w?' class="warn"':'')+'><b>'+a.h+'.</b> '+a.t+'</li>').join('')+'</ul>':'<p class="empty">Nothing is outside your usual range, and no pattern in your data calls for a change right now.</p>'):
+      '<p class="empty">The check-up needs about a week of entries before it knows your usual range.</p>')+
+    '<p class="muted small" style="max-width:68ch">Out of range means more than one standard deviation from your own average. The suggestions come from your own numbers plus well-supported basics. Treat them as things to test for a week, not as medical advice.</p></div>';
+}
+
+function renderInsights(){
+  const el=$('#insights');if(!ready()){el.innerHTML='<div class="panel">'+loadingHtml()+'</div>';return;}
+  const c=cfg(),t=today(),first=firstKey();
+  if(!first){$('#rg-note').textContent='';el.innerHTML='<div class="panel">'+emptyHtml('Nothing to analyse yet.','Time a work session or log a check-in on the Today tab. The charts and findings here are built only from your own entries.')+'</div>';return;}
+  let from=range==='all'?first:addDays(t,-(Number(range)-1));if(from<first)from=first;if(from<addDays(t,-364))from=addDays(t,-364);
+  const days=buildDays(from,t),f0=dparse(from),sess=Array.from(S.sessions.values()).filter(s=>s.start>=f0);
+  $('#rg-note').textContent=labelDay(from)+' to '+labelDay(t)+' · '+days.length+' day'+(days.length===1?'':'s')+' · recalculated each time you open this tab';
+  const est=estimation(sess),types=groupTime(sess,'type'),courses=groupTime(sess,'course'),tod=byBlock(sess,'focus'),todE=byBlock(sess,'energy');
+  const effM=effect(sess,'mood'),effE=effect(sess,'energy'),hab=habitStats(days),ass=assoc(days,sess),bl=baseline();
+  const total=sess.reduce((s,x)=>s+(x.min||0),0);
+  const fAll=sess.map(s=>{const q=postOf(s);return q&&q.focus;}).filter(isNum),mAll=[];ratings().forEach(r=>{if(r.t>=f0&&isNum(r.vals.mood))mAll.push(r.vals.mood);});
+
+  // findings: plain statements, each with the count it rests on
+  const F=[];
+  if(bl.ready&&bl.z<=-1)F.push({w:1,t:'Your mood over the last 7 days ('+f1(bl.recent)+') is below your own 4-week baseline ('+f1(bl.base)+'). See the wellbeing section below.'});
+  const over=est.byType.find(x=>x.n>=3&&x.v>=1.15);
+  if(over)F.push({t:esc(over.label)+' tasks take '+over.v.toFixed(1)+'× the time you plan for them (median of '+over.n+' finished tasks). Pad those estimates.'});
+  else if(est.n>=3)F.push({t:'Finished tasks take '+est.overall.toFixed(1)+'× your estimate overall ('+est.n+' tasks).'});
+  if(types.length>1&&total>0)F.push({t:esc(types[0].label)+' takes the most time: '+fmtMin(types[0].v)+' across '+types[0].n+' sessions, '+Math.round(types[0].v/total*100)+'% of what you tracked.'});
+  const tb=tod.filter(x=>x.n>=3).sort((a,b)=>b.v-a.v);
+  if(tb.length>=2&&tb[0].v-tb[tb.length-1].v>=.5)F.push({t:'Focus is highest in the '+tb[0].label.toLowerCase()+' ('+f1(tb[0].v)+', n='+tb[0].n+') and lowest in the '+tb[tb.length-1].label.toLowerCase()+' ('+f1(tb[tb.length-1].v)+', n='+tb[tb.length-1].n+').'});
+  const dr=effM.find(x=>x.n>=3&&x.v<=-.4);if(dr)F.push({t:esc(dr.label)+' sessions leave your mood '+f1(-dr.v)+' points lower than when you started (n='+dr.n+').'});
+  const up=effM.slice().reverse().find(x=>x.n>=3&&x.v>=.4);if(up)F.push({t:esc(up.label)+' sessions lift your mood by '+f1(up.v)+' points (n='+up.n+').'});
+  ass.forEach(a=>{if(a.r!=null&&Math.abs(a.r)>=.3&&a.a==='Hours slept'&&a.b==='focus that day')F.push({t:'More sleep goes with '+(a.r>0?'higher':'lower')+' focus the next day (r = '+a.r.toFixed(2)+', '+a.n+' days).'});});
+  const hb=hab.filter(x=>x.nOn>=5&&x.nOff>=5&&Math.abs(x.on-x.off)>=.4).sort((a,b)=>Math.abs(b.on-b.off)-Math.abs(a.on-a.off))[0];
+  if(hb)F.push({t:'On days with “'+esc(hb.h.name)+'” your mood averages '+f1(hb.on)+', against '+f1(hb.off)+' on days without ('+hb.nOn+' and '+hb.nOff+' days).'});
+
+  const exps=c.measures.filter(m=>m.askBefore&&(m.when||[]).indexOf('before')>=0&&(m.when||[]).indexOf('after')>=0).map(m=>Object.assign({m:m,by:effect(sess,m.id)},expGap(sess,m.id)));
+  exps.forEach(x=>{if(x.n>=5&&Math.abs(x.act-x.exp)>=.5)F.push({t:esc(x.m.name)+' turns out '+(x.act>x.exp?'higher':'lower')+' than you predict: '+f1(x.act)+' against '+f1(x.exp)+' expected ('+x.n+' sessions).'});});
+  const gs=goalStats(sess);if(gs.n>=5&&gs.avg<75)F.push({t:'You reach on average '+Math.round(gs.avg)+'% of a chunk\'s goal post ('+gs.n+' chunks). Set smaller goal posts, or give chunks more time.'});
+  const expHtml='<div class="panel"><h3>Expectation and reality</h3><p class="muted small">What you predicted before a session against what you rated after it. Right of the centre line means it turned out higher than you expected.</p>'+
+    (gs.n?'<p class="small" style="margin-top:4px"><b>Chunk goal posts</b>: fully reached in <span class="mono">'+gs.full+' of '+gs.n+'</span> chunks, <span class="mono">'+Math.round(gs.avg)+'%</span> of the goal post on average.</p>':'')+
+    (exps.some(x=>x.n)?exps.filter(x=>x.n).map(x=>'<p class="small" style="margin-top:4px"><b>'+esc(x.m.name)+'</b>: expected <span class="mono">'+f1(x.exp)+'</span>, turned out <span class="mono">'+f1(x.act)+'</span> (n='+x.n+')</p>'+divbars(x.by.slice().reverse(),3)).join(''):
+      '<p class="empty">Appears once sessions have a prediction before and a rating after.</p>')+'</div>';
+  const mOpts=c.measures.map(m=>'<option value="'+esc(m.id)+'"'+(m.id===trendM?' selected':'')+'>'+esc(m.name)+'</option>').join('');
+  const tm=c.measures.find(m=>m.id===trendM)||c.measures[0]||{id:'mood',name:'Mood'};
+  const tr=svgTrend(days,tm.id,tm.name);
+  const ws=weeklySorted(),lastW=ws.length?phqScore(ws[ws.length-1]):null,prevW=ws.length>1?phqScore(ws[ws.length-2]):null;
+  const flag=lastW&&(lastW.phq>=3||lastW.gad>=3),flag2=flag&&prevW&&(prevW.phq>=3||prevW.gad>=3);
+  const band=s=>s<=2?'usual range':s<=5?'mild':s<=8?'moderate':'high';
+  const nRec=sess.filter(x=>x.retro).length;
+  const recBar=nRec?'<label class="row small muted"><input type="checkbox" data-chg="recall"'+(inclRecall?' checked':'')+'> Include ratings given from memory ('+nRec+' recalled session'+(nRec===1?'':'s')+')</label>':'';
+
+  el.innerHTML=checkupHtml()+recBar+
+  '<div class="panel"><h3>Findings</h3>'+(F.length?'<ul class="find">'+F.map(f=>'<li'+(f.w?' class="warn"':'')+'>'+f.t+'</li>').join('')+'</ul>':
+    '<p class="empty">Not enough entries for a finding yet. Comparisons need at least 3 sessions in a group; sleep and habit links need 10 days.</p>')+
+  '<div class="tiles">'+
+    '<div class="tile"><div class="v">'+fmtMin(total)+'</div><div class="k">tracked work</div></div>'+
+    '<div class="tile"><div class="v">'+sess.length+'</div><div class="k">sessions</div></div>'+
+    '<div class="tile"><div class="v">'+f1(mean(fAll))+'</div><div class="k">mean focus (1–'+c.scale+')</div></div>'+
+    '<div class="tile"><div class="v">'+f1(mean(mAll))+'</div><div class="k">mean mood (1–'+c.scale+')</div></div>'+
+    '<div class="tile"><div class="v">'+(est.n?est.overall.toFixed(2)+'×':'–')+'</div><div class="k">actual vs planned time</div></div>'+
+  '</div></div>'+
+
+  '<div class="panel"><h3>Time worked per day</h3>'+svgBars(days)+'</div>'+
+
+  '<div class="panel"><div class="head"><h3>How you felt</h3><label class="row small muted">Scale <select class="in" style="width:auto" data-chg="trend">'+mOpts+'</select></label></div>'+
+    (tr?tr.svg+'<div class="key"><span><i class="k-dot"></i>daily mean</span><span><i class="k-line"></i>7-day average'+(tr.last!=null?' (now '+f1(tr.last)+')':'')+'</span><span><i class="k-dash"></i>your average for this range</span></div>':
+      '<p class="empty">No ratings for this scale in the range.</p>')+'</div>'+
+
+  '<div class="panel"><h3>Where the time goes</h3>'+(types.length?hbars(types,fmtMin,0,'sessions')+(courses.length>1?'<h3 style="margin-top:8px">By source</h3>'+hbars(courses,fmtMin,0,'sessions'):''):'<p class="empty">No timed sessions in this range.</p>')+'</div>'+
+
+  '<div class="panel"><h3>Actual time vs your estimate</h3><p class="muted small">Median of actual ÷ planned minutes for finished tasks. 1.0× means your estimate was right; 1.5× means it took half again as long.</p>'+
+    (est.byType.length?hbars(est.byType,v=>v.toFixed(2)+'×',Math.max(2,est.byType[0].v),'tasks'):'<p class="empty">Appears once you finish tasks that have a time estimate.</p>')+'</div>'+
+
+  '<div class="panel"><h3>Focus and energy by time of day</h3>'+
+    (tod.some(x=>x.n)?'<p class="muted small">Mean focus after sessions that started in each part of the day.</p>'+hbars(tod.filter(x=>x.n),f1,c.scale,'sessions')+
+      (todE.some(x=>x.n)?'<p class="muted small" style="margin-top:6px">Mean energy after those sessions.</p>'+hbars(todE.filter(x=>x.n),f1,c.scale,'sessions'):''):'<p class="empty">Appears once sessions have an after-rating for focus.</p>')+'</div>'+
+
+  '<div class="panel"><h3>What each kind of work does to you</h3><p class="muted small">Average change from the rating before a session to the rating after it. Left of the centre line is a drop.'+(nRec?' Sessions logged from memory are left out: a before-and-after difference cannot be rebuilt from memory.':'')+'</p>'+
+    (effM.length?'<p class="small" style="margin-top:4px">Mood</p>'+divbars(effM,3)+(effE.length?'<p class="small" style="margin-top:6px">Energy</p>'+divbars(effE,3):''):'<p class="empty">Appears once sessions have both a before and an after rating.</p>')+'</div>'+
+
+  expHtml+
+
+  '<div class="panel"><h3>Habits</h3>'+(hab.length?heatHtml()+hab.map(x=>'<div class="hab"><div class="head"><span>'+esc(x.h.name)+'</span><span class="mono small muted">'+x.done+'/'+days.length+' days · '+Math.round(x.rate*100)+'% · streak '+streak(x.h.id)+'</span></div>'+
+      (x.nOn>=5&&x.nOff>=5?'<div class="small muted">Mood on days with it '+f1(x.on)+' (n='+x.nOn+'), without '+f1(x.off)+' (n='+x.nOff+')</div>':'')+'</div>').join(''):'<p class="empty">No habits set up.</p>')+'</div>'+
+
+  '<div class="panel"><h3>What moves together</h3><p class="muted small">Correlation (r) runs from −1 to +1. Shown once there are 10 paired entries. It describes your data and does not prove cause.</p>'+
+    '<div class="scroll"><table class="tbl"><thead><tr><th>Pair</th><th>r</th><th>n</th></tr></thead><tbody>'+ass.map(a=>'<tr><td>'+esc(a.a)+' and '+esc(a.b)+'</td><td class="num">'+(a.r==null?'<span class="muted">needs '+Math.max(0,10-a.n)+' more</span>':(a.r>0?'+':'')+a.r.toFixed(2))+'</td><td class="num">'+a.n+' '+a.unit+'</td></tr>').join('')+'</tbody></table></div></div>'+
+
+  '<div class="panel"><h3>Wellbeing watch</h3>'+
+    (bl.ready?'<p>Mood, last 7 days: <span class="mono">'+f1(bl.recent)+'</span>. Your baseline over the 4 weeks before: <span class="mono">'+f1(bl.base)+'</span>. '+
+      (bl.z<=-1?'<span class="pill warn">below baseline</span>':bl.z>=1?'<span class="pill">above baseline</span>':'<span class="pill">within your usual range</span>')+'</p>':
+      '<p class="muted">The baseline comparison starts once there are 10 days with a mood rating in the previous 4 weeks and 4 in the last 7 (so far: '+bl.base+' and '+bl.rec+').</p>')+
+    (ws.length?'<div><p class="muted small">Weekly screen, total out of 12</p>'+hbars(ws.slice(-8).map(w=>{const s=phqScore(w);return{label:labelDay(dkey(w.t)),v:s.total,n:1};}),v=>v+' / 12',12,'screen').replace(/<span class="n">n=1<\/span>/g,'<span class="n"></span>')+'</div>'+
+      '<p class="small">Latest: total '+lastW.total+' ('+band(lastW.total)+'), low mood pair '+lastW.phq+'/6, worry pair '+lastW.gad+'/6.</p>':
+      '<p class="muted">No weekly screen yet. It takes four taps on the Today tab.</p>')+
+    (flag?'<div class="note'+(flag2?' bad':'')+'">'+(flag2?'Two screens in a row are at or above the usual cut-off of 3 on a pair. That is worth a conversation with your doctor or your campus counselling service, whatever the rest of this page says.':
+      'Your latest screen is at or above the usual cut-off of 3 on a pair. One high week is common. If it repeats next week, talk to your doctor or campus counselling.')+
+      ' This screen cannot diagnose anything. If you ever feel unsafe, 9-8-8 answers calls and texts at any hour in Canada.</div>':'')+'</div>';
+}
+
+/* ---------- Setup ---------- */
+function renderSetup(){
+  if(!ready()){['set-measures','set-habits','set-misc','set-cal'].forEach(i=>{$('#'+i).innerHTML=loadingHtml();});return;}
+  const c=cfg();
+  $('#set-measures').innerHTML=c.measures.map((m,i)=>'<div class="ed" data-i="'+i+'">'+
+    '<input class="in" data-chg="m-name" value="'+esc(m.name)+'" aria-label="Scale name">'+
+    '<input class="in" data-chg="m-low" value="'+esc(m.low||'')+'" aria-label="Label for 1">'+
+    '<input class="in" data-chg="m-high" value="'+esc(m.high||'')+'" aria-label="Label for '+c.scale+'">'+
+    '<input class="in" style="grid-column:1/-1" data-chg="m-ask" value="'+esc(m.ask||'')+'" placeholder="Question asked after work or in a check-in" aria-label="Question">'+
+    '<input class="in" style="grid-column:1/-1" data-chg="m-askb" value="'+esc(m.askBefore||'')+'" placeholder="Question asked before work, worded as a prediction (optional)" aria-label="Question before work">'+
+    '<div class="w">'+WHEN.map(w=>'<label><input type="checkbox" data-chg="m-when" value="'+w[0]+'"'+((m.when||[]).indexOf(w[0])>=0?' checked':'')+'> '+w[1]+'</label>').join('')+
+    '<button type="button" class="btn sm ghost" data-act="m-del">Remove</button></div></div>').join('')||'<p class="empty">No scales. Add one.</p>';
+  $('#set-habits').innerHTML=c.habits.map((h,i)=>'<div class="ed h" data-i="'+i+'">'+
+    '<input class="in" data-chg="h-name" value="'+esc(h.name)+'" aria-label="Habit">'+
+    '<input class="in" type="number" min="1" max="7" data-chg="h-pw" value="'+(h.perWeek||7)+'" aria-label="Days per week">'+
+    '<button type="button" class="btn sm ghost" data-act="h-del">Remove</button></div>').join('')||'<p class="empty">No habits. Add one.</p>';
+  $('#set-misc').innerHTML='<label class="field">Kinds of work, separated by commas<input data-chg="types" value="'+esc(c.taskTypes.join(', '))+'"></label>'+
+    '<div class="grid2" style="margin-top:10px"><label class="field">Ask for a check-in after this many hours without a rating<input type="number" min="1" max="24" data-chg="nudge" value="'+c.nudgeHours+'"></label>'+
+    '<label class="field">Only ask between these hours<span class="row"><input type="number" min="0" max="23" data-chg="ds" value="'+c.dayStart+'" aria-label="From hour" style="width:5rem"><span>and</span><input type="number" min="1" max="24" data-chg="de" value="'+c.dayEnd+'" aria-label="To hour" style="width:5rem"></span></label></div>';
+  $('#set-cal').innerHTML=setCalHtml();
+  const ac=Platform.account||{mode:'local'};
+  $('#set-acct').innerHTML=(ac.mode==='firebase'?'<p class="small">Synced with your Google account <b>'+esc(ac.email)+'</b>. Your log is the same on every device where you sign in.</p><div><button type="button" class="btn sm" data-act="sign-out">Sign out</button></div>':
+      '<p class="small" style="max-width:68ch"><b>This device only.</b> Your log is kept in this browser. To use it on your phone and computer together, connect a Firebase project in config.js (README.md shows how), then import a JSON export from here.</p>')+
+    '<p class="small muted">Google Calendar: '+(Platform.calendarConfigured()?'set up':'not set up (add a Google client ID in config.js)')+'.</p>';
+  renderBridge();
+  $('#pill-status').innerHTML=Platform.pillConnected()?'<span class="pill">running</span> The taskbar timer is running on this computer.':'<span class="pill warn">not running</span> On Windows, start TaskbarPill.exe to see the clock on the taskbar.';
+  const ta=$('#cfg-json');if(document.activeElement!==ta)ta.value=JSON.stringify(stripCfg(c),null,2);
+}
+// Long-lasting calendar access through an Apps Script in the viewer's own Google account (see platform.js).
+let bridgeMsg='';
+function renderBridge(){const el=$('#set-bridge');if(!el)return;const inp=$('#bridge-url');if(inp&&document.activeElement===inp)return;
+  const keep=inp?inp.value:'',b=Platform.bridgeInfo?Platform.bridgeInfo():null;
+  if(b&&b.on){el.innerHTML='<p class="small" style="max-width:68ch"><span class="pill">long-lasting</span> The log reaches your calendar through your own Apps Script, so it stays connected until you remove it. Nothing to renew.</p>'+
+    '<div class="row"><button type="button" class="btn sm" data-act="bridge-test">Test it</button><button type="button" class="btn sm ghost" data-act="bridge-remove">Remove</button></div>'+(bridgeMsg?'<p class="small">'+esc(bridgeMsg)+'</p>':'');return;}
+  el.innerHTML='<p class="small" style="max-width:68ch">Without this, Google gives the log one hour of calendar access at a time. A small script in your own Google account keeps it connected for months. About five minutes, once.</p>'+
+    '<ol class="small" style="max-width:68ch;padding-left:1.2rem;line-height:1.7">'+
+    '<li><button type="button" class="btn sm pri" data-act="bridge-copy">Copy the script</button> It holds a secret key made for your log.</li>'+
+    '<li>Open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">a new Apps Script project</a>, select everything in the editor and paste over it. Save (Ctrl+S).</li>'+
+    '<li>On the left, next to <b>Services</b>, press <b>+</b>, choose <b>Google Calendar API</b> and press <b>Add</b>.</li>'+
+    '<li><b>Deploy</b> &rarr; <b>New deployment</b> &rarr; gear icon &rarr; <b>Web app</b>. Execute as: <b>Me</b>. Who has access: <b>Anyone</b>. Press <b>Deploy</b> and allow access. If Google says the app is unverified, choose <b>Advanced</b> &rarr; <b>Go to &hellip;</b>: it is your own script.</li>'+
+    '<li>Copy the <b>Web app URL</b> (it ends in /exec) and paste it here:</li></ol>'+
+    '<div class="row"><input class="in" id="bridge-url" style="flex:1;min-width:14rem" placeholder="https://script.google.com/macros/s/&hellip;/exec" aria-label="Web app URL"><button type="button" class="btn sm pri" data-act="bridge-save">Save and test</button></div>'+
+    (bridgeMsg?'<p class="small" style="color:var(--bad)">'+esc(bridgeMsg)+'</p>':'');
+  const ni=$('#bridge-url');if(ni)ni.value=keep||(b&&b.url)||'';}
+function bridgeErr(e){return calMsg(e&&e.code)+(e&&e.message&&e.message!=='wrong key'?' ('+e.message+')':'');}
+function stripCfg(c){return{version:c.version||1,scale:c.scale,measures:c.measures,habits:c.habits,taskTypes:c.taskTypes,nudgeHours:c.nudgeHours,dayStart:c.dayStart,dayEnd:c.dayEnd,cal:c.cal};}
+function validateCfg(o){
+  if(!o||typeof o!=='object'||Array.isArray(o))return 'The JSON must be one object.';
+  if(!Array.isArray(o.measures)||!Array.isArray(o.habits)||!Array.isArray(o.taskTypes))return 'It needs "measures", "habits" and "taskTypes" lists.';
+  const ids=new Set();
+  for(const m of o.measures){if(!m||!/^[A-Za-z0-9_]+$/.test(m.id||'')||!m.name)return 'Every measure needs a "name" and an "id" made of letters, digits or underscores.';
+    if(ids.has(m.id))return 'Two measures share the id "'+m.id+'".';ids.add(m.id);
+    if(!Array.isArray(m.when)||m.when.some(w=>['before','after','moment'].indexOf(w)<0))return 'Measure "'+m.id+'": "when" must list before, after or moment.';}
+  const hs=new Set();
+  for(const h of o.habits){if(!h||!/^[A-Za-z0-9_]+$/.test(h.id||'')||!h.name)return 'Every habit needs a "name" and an "id" made of letters, digits or underscores.';if(hs.has(h.id))return 'Two habits share the id "'+h.id+'".';hs.add(h.id);}
+  if(o.taskTypes.some(t=>typeof t!=='string'||!t.trim()))return '"taskTypes" must be a list of names.';
+  if(o.scale!==undefined&&!(o.scale>=3&&o.scale<=10))return '"scale" must be between 3 and 10.';
+  if(o.cal!==undefined&&(!o.cal||typeof o.cal!=='object'||Array.isArray(o.cal)))return '"cal" must be an object.';
+  return null;}
+function aiBrief(){return 'This is the configuration for my personal work, mood and habit tracker. Change it as I ask below and reply with only the complete JSON, in the same shape.\n\nRules:\n'+
+  '- "measures" are rating scales answered from 1 to "scale". Each needs a unique "id" (letters, digits, underscore), a "name", "low" and "high" labels for the two ends, and "when": any of "before" (asked before a work session), "after" (asked after it), "moment" (asked in a stand-alone check-in). Optional "ask" is the question shown after work or in a check-in; optional "askNow" replaces it in a check-in. Optional "askBefore" is the question shown before work, worded as a prediction; a scale that has it and is asked both before and after gets an expectation-against-outcome comparison.\n'+
+  '- Keep the ids mood, energy, tension and focus if those scales stay: the analysis looks them up by id. Changing an id cuts a scale off from its past data.\n'+
+  '- "habits" are daily yes/no habits with "id", "name" and "perWeek" (target days per week, 1 to 7).\n'+
+  '- "taskTypes" is the list of kinds of work.\n'+
+  '- "nudgeHours" is how many hours without a rating before the page asks for a check-in; "dayStart" and "dayEnd" are the hours of the day between which it asks.\n'+
+  '- "cal" holds the calendar settings: "workStart" and "workEnd" are the preferred working hours, "eveningEnd" is how late overflow work may run, "maxBlock" is how many minutes an unplanned session may run before the page asks whether you are still working, "breakMin" is the gap in minutes kept between placeholders, and "alert" (true or false) turns the calendar alert at the end of the planned time of a session on or off. Leave "on", "calendars", "target" and "never" exactly as they are.\n\n'+
+  'What I want changed: [write it here]\n\nCurrent configuration:\n'+JSON.stringify(stripCfg(cfg()),null,2);}
+async function copyText(txt,okMsg){try{await navigator.clipboard.writeText(txt);toast(okMsg);}catch(e){const ta=$('#cfg-json');ta.value=txt;ta.focus();ta.select();toast('Copying is blocked here. The text is selected in the box: copy it by hand.');}}
+
+/* ---------- export ---------- */
+const csvCell=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+const csv=rows=>rows.map(r=>r.map(csvCell).join(',')).join('\n');
+async function save(filename,data){
+  try{Platform.saveFile(filename,data);toast('Saved '+filename);}
+  catch(e){await copyText(data,'Saving files is blocked here, so the data was copied instead.');}}
+function importFile(f){if(!f)return;const r=new FileReader();
+  r.onload=()=>{let o;try{o=JSON.parse(r.result);}catch(e){toast('That file is not valid JSON.');return;}
+    const cols=['tasks','sessions','checkins','days','weekly'];
+    if(!o||!cols.some(c=>Array.isArray(o[c]))){toast('That file is not a Self-Study Log export.');return;}
+    let n=0;cols.forEach(c=>(o[c]||[]).forEach(x=>{if(x&&x.id!=null){const d=Object.assign({},x);delete d.id;put(c,String(x.id),d);n++;}}));
+    if(o.config&&!validateCfg(o.config))saveCfg(stripCfg(Object.assign({},DEFAULT_CONFIG,o.config)));
+    toast('Imported '+n+' entries.');};
+  r.readAsText(f);}
+function exportDaily(){const c=cfg(),first=firstKey();if(!first){toast('Nothing to export yet.');return;}
+  const keepRec=inclRecall;inclRecall=false; // the exported daily means never mix in ratings given from memory
+  const days=buildDays(first<addDays(today(),-399)?addDays(today(),-399):first,today());inclRecall=keepRec;
+  const head=['date','minutes_worked','sessions','sleep_hours','sleep_quality'].concat(c.measures.map(m=>'mean_'+m.id),c.habits.map(h=>'habit_'+h.id));
+  return save('self-study-daily.csv',csv([head].concat(days.map(d=>[d.k,Math.round(d.min),d.n,isNum(d.day.sleepH)?d.day.sleepH:'',isNum(d.day.sleepQ)?d.day.sleepQ:'']
+    .concat(c.measures.map(m=>isNum(d.m[m.id])?d.m[m.id].toFixed(2):''),c.habits.map(h=>d.day.habits&&d.day.habits[h.id]?1:0))))));}
+function exportSessions(){const c=cfg();if(!S.sessions.size){toast('No sessions to export yet.');return;}
+  const head=['start','end','minutes','title','source','type','note','recalled','hours_until_logged','chunk','planned_minutes','goal_post','goal_reached_pct'].concat(c.measures.map(m=>'pre_'+m.id),c.measures.map(m=>'post_'+m.id),c.measures.map(m=>'overall_'+m.id));
+  const rows=Array.from(S.sessions.values()).sort((a,b)=>a.start-b.start).map(s=>[new Date(s.start).toISOString(),new Date(s.end||s.start).toISOString(),s.min,s.title,s.course,s.type,s.note,s.retro?1:0,s.retro&&s.loggedAt?((s.loggedAt-(s.end||s.start))/36e5).toFixed(1):'',s.chunkIdx||'',isNum(s.planMin)?s.planMin:'',s.goal||'',isNum(s.goalPct)?s.goalPct:'']
+    .concat(c.measures.map(m=>s.pre&&isNum(s.pre[m.id])?s.pre[m.id]:''),c.measures.map(m=>s.post&&isNum(s.post[m.id])?s.post[m.id]:''),c.measures.map(m=>s.overall&&isNum(s.overall[m.id])?s.overall[m.id]:'')));
+  return save('self-study-sessions.csv',csv([head].concat(rows)));}
+function exportAll(){const o={exportedAt:new Date().toISOString(),config:stripCfg(cfg())};
+  ['tasks','sessions','checkins','days','weekly'].forEach(k=>{o[k]=Array.from(S[k].entries()).map(e=>Object.assign({id:e[0]},e[1]));});
+  return save('self-study-log.json',JSON.stringify(o,null,2));}
+
+/* ---------- actions ---------- */
+function armed(btn,label){if(btn.dataset.armed)return true;const old=btn.textContent;btn.dataset.armed='1';btn.textContent=label||'Tap again to confirm';
+  setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=old;}},3500);return false;}
+function editCfg(fn){const c=clone(stripCfg(cfg()));fn(c);saveCfg(c);}
+document.addEventListener('click',e=>{
+  if(e.target.id==='sheet'){if(sheetCtx&&sheetCtx.kind!=='weekly'&&sheetCtx.kind!=='after')closeSheet();return;}
+  const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act,row=b.closest('[data-id]'),id=row?row.dataset.id:null;
+  switch(act){
+    case 'pf':planFilter=b.dataset.v;renderAll();break;
+    case 'rg':range=b.dataset.v;renderAll();break;
+    case 'pt':{const on=b.getAttribute('aria-pressed')==='true';b.parentNode.querySelectorAll('.pt').forEach(x=>x.setAttribute('aria-pressed','false'));if(!on)b.setAttribute('aria-pressed','true');if(b.closest('.crate'))chunkBoxSync();break;}
+    case 'close':closeSheet();break;
+    case 'start':{const t=S.tasks.get(id);if(t)beforeSheet({taskId:id,title:t.title,course:t.course||'',type:t.type||''});break;}
+    case 'start-free':beforeSheet({taskId:'',title:'Unplanned work',course:'',type:''});break;
+    case 'begin':{const t=sheetCtx.task,ci=sheetCtx.chunk,st=Date.now();
+      put('config','active',{taskId:t.taskId,title:t.title,course:t.course,type:t.type,start:st,pausedAt:null,pausedMs:0,pre:readRates(),chunkId:ci?ci.id:'',chunkIdx:ci?ci.idx:null,chunkN:ci?ci.n:0,goal:ci?ci.goal:'',planMin:ci?ci.left:null});
+      closeSheet();if(tab!=='mini'){location.hash='today';window.scrollTo(0,0);}calOnStart(st);break;}
+    case 'pause':{const a=active();if(a&&!a.pausedAt){put('config','active',Object.assign({},a,{pausedAt:Date.now()}));parkAlert();}break;}
+    case 'resume':{const a=active();if(a&&a.pausedAt){put('config','active',Object.assign({},a,{pausedMs:(a.pausedMs||0)+(Date.now()-a.pausedAt),pausedAt:null}));calOnResume(a.start);}break;}
+    case 'finish':afterSheet(false);break;
+    case 'stopped-early':afterSheet(true);break;
+    case 'still':{const a=active();if(a)put('config','active',Object.assign({},a,{ack:Date.now()}));break;}
+    case 'save-session':{const a=active();if(!a){closeSheet();break;}const min=Math.max(1,Number($('#f-min').value)||1),endTs=Math.max(a.start+6e4,Math.min(sheetCtx.end,a.start+(a.pausedMs||0)+min*6e4));
+      const fin=selVal('c-fin'),pv=selVal('c-pct'),pf=$('#c-pctf'),pct=pv!=null&&pf&&!pf.hidden?Number(pv):null,exb=$('#c-extra-box'),open=exb&&!exb.hidden;
+      const extra=open?Math.max(0,Math.round(Number($('#c-extra').value)||0)):0,carry=!!(open&&$('#c-carry')&&$('#c-carry').checked),dn=$('#f-done'),taskDone=!!(dn&&dn.checked&&a.taskId);
+      put('sessions',uid(),{taskId:a.taskId||'',title:a.title,course:a.course||'',type:a.type||'',start:a.start,end:endTs,min:Math.round(min*10)/10,pre:a.pre||{},post:readRates(),note:$('#f-note').value.trim(),
+        chunkId:a.chunkId||'',chunkIdx:a.chunkIdx||null,planMin:a.planMin!=null?a.planMin:null,goal:a.goal||'',goalPct:pct});
+      if(a.taskId){const t=S.tasks.get(a.taskId);if(t){const ch=getChunks(t),k=ch.findIndex(x=>x.id===a.chunkId);
+        if(k>=0){const c0=ch[k],done=taskDone||(ch.length>1?fin!=='no':extra>0||pct===100);
+          if(done){c0.done=true;c0.doneAt=Date.now();}if(pct!=null)c0.pct=pct;
+          if(extra>0){const nx=ch[k+1]&&!ch[k+1].done?ch[k+1]:null,g=carry&&c0.goal?'Finish: '+c0.goal:'';
+            if(nx){nx.min+=extra;if(g)nx.goal=g+(nx.goal?' · '+nx.goal:'');}else ch.push({id:'c'+uid(),min:extra,goal:g,done:false,ev:null});}}
+        const upd={chunks:ch,est0:t.est0||t.est};if(ch.length)upd.est=sumMin(ch);if(taskDone){upd.done=true;upd.doneAt=Date.now();}
+        put('tasks',a.taskId,Object.assign({},t,upd));}}
+      del('config','active');closeSheet();toast('Session saved: '+fmtMin(min));calOnFinish(a,endTs,{taskDone:taskDone});break;}
+    case 'discard':if(armed(b,'Tap again to discard')){const a=active();del('config','active');closeSheet();if(a)calOnFinish(a,Date.now(),{discard:true});}break;
+    case 'tmode':case 'tmode-set':{const a=active(),want=act==='tmode'?(tmode==='press'?'track':'press'):b.dataset.v;
+      if(want==='press'&&a&&a.planMin==null){toast('This session has no planned length, so the clock shows time passed.');break;}
+      tmode=want;try{localStorage.setItem('ssl-tmode',tmode);}catch(e2){}renderAll();break;}
+    case 'ch-split':{const ch=sheetCtx.chunks,dn=ch.filter(x=>x.done),op=ch.filter(x=>!x.done),tot=op.length?sumMin(op):Math.round((parseFloat($('#f-est').value)||0)*60);
+      if(!(tot>0)){$('#f-err').textContent='Enter the total time first.';break;}
+      const n=+b.dataset.v,each=Math.round(tot/n/5)*5,out=[];for(let i=0;i<n;i++)out.push(Object.assign({},op[i]||newChunk(0),{min:i<n-1?each:tot-each*(n-1)}));
+      sheetCtx.dropped=(sheetCtx.dropped||[]).concat(op.slice(n).filter(x=>x.ev).map(x=>x.ev));sheetCtx.chunks=dn.concat(out);$('#f-err').textContent='';chunkEd();bankBox();break;}
+    case 'ch-add':{const ch=sheetCtx.chunks;if(!ch.length){const m=Math.round((parseFloat($('#f-est').value)||0)*60);if(m>0)ch.push(newChunk(m));}ch.push(newChunk(60));chunkEd();bankBox();break;}
+    case 'ch-del':{const i=+b.closest('.chk').dataset.i,x=sheetCtx.chunks[i];if(!x||x.done)break;if(x.ev)sheetCtx.dropped.push(x.ev);sheetCtx.chunks.splice(i,1);
+      if(sheetCtx.chunks.length===1&&!sheetCtx.chunks[0].done)$('#f-est').value=hrs(sheetCtx.chunks[0].min);chunkEd();bankBox();break;}
+    case 'checkin':checkinSheet();break;
+    case 'save-checkin':{const v=readRates();if(!Object.keys(v).length){toast('Tap at least one number first.');break;}put('checkins',uid(),{t:Date.now(),vals:v,note:$('#f-note').value.trim()});closeSheet();toast('Check-in saved');break;}
+    case 'weekly':weeklySheet();break;
+    case 'save-weekly':{const v=readRates(),a=[0,1,2,3].map(i=>v['q'+i]);if(a.some(x=>x===undefined)){$('#f-err').textContent='Answer all four questions to get a score.';break;}
+      put('weekly',uid(),{t:Date.now(),a:a});closeSheet();toast('Weekly screen saved. The result is under Insights.');break;}
+    case 'habit':{const k=today(),d=clone(S.days.get(k)||{});d.habits=d.habits||{};const hid=b.dataset.id;if(d.habits[hid])delete d.habits[hid];else d.habits[hid]=true;put('days',k,d);break;}
+    case 'task-new':taskSheet(null);break;
+    case 'task-edit':taskSheet(id);break;
+    case 'task-save':{const title=$('#f-title').value.trim();if(!title){$('#f-err').textContent='Give the task a name.';break;}
+      const old=sheetCtx.id?S.tasks.get(sheetCtx.id):null,tid=sheetCtx.id||uid(),dropped=(sheetCtx.dropped||[]).slice();
+      const chunks=sheetCtx.chunks.filter(x=>{if(x.done||x.min>0)return true;if(x.ev)dropped.push(x.ev);return false;});
+      const estMin=chunks.length?sumMin(chunks):(Math.round((parseFloat($('#f-est').value)||0)*60)||null);
+      const tick=$('#f-plan'),useCal=tick?tick.checked:!!(old&&old.useCal),rows=tick&&tick.checked&&sheetCtx.plan?sheetCtx.plan.rows:null,loggedAny=!!(old&&(loggedByTask().get(tid)||0)>0);
+      put('tasks',tid,Object.assign({},old||{done:false,created:Date.now()},{title:title,course:$('#f-course').value.trim(),type:$('#f-type').value,est:estMin,est0:loggedAny?(old.est0||old.est||estMin):estMin,due:$('#f-due').value||'',chunks:chunks,useCal:useCal}));closeSheet();
+      if(rows)applyChunkPlan(tid,rows,dropped);else if(tick&&!tick.checked&&old)releaseBlocks(tid,'✖ ',true,dropped);break;}
+    case 'task-del':if(armed(b,'Tap again to delete')){releaseBlocks(sheetCtx.id,'\u2716 ',false);del('tasks',sheetCtx.id);closeSheet();}break;
+    case 'entry-del':if(armed(b,'Tap again to delete'))del(row.dataset.col,id);break;
+    case 'm-add':editCfg(c=>c.measures.push({id:'m_'+uid(),name:'New scale',ask:'',low:'Low',high:'High',when:['after']}));break;
+    case 'm-del':if(armed(b,'Tap again to remove')){const i=+b.closest('.ed').dataset.i;editCfg(c=>c.measures.splice(i,1));}break;
+    case 'h-add':editCfg(c=>c.habits.push({id:'h_'+uid(),name:'New habit',perWeek:7}));break;
+    case 'h-del':if(armed(b,'Tap again to remove')){const i=+b.closest('.ed').dataset.i;editCfg(c=>c.habits.splice(i,1));}break;
+    case 'cfg-copy':copyText($('#cfg-json').value,'Configuration copied');break;
+    case 'cfg-brief':copyText(aiBrief(),'Brief copied. Paste it into any AI model.');break;
+    case 'cfg-apply':{const msg=$('#cfg-msg');let o;try{o=JSON.parse($('#cfg-json').value);}catch(err){msg.style.color='var(--bad)';msg.textContent='That is not valid JSON: '+err.message;break;}
+      const er=validateCfg(o);if(er){msg.style.color='var(--bad)';msg.textContent=er;break;}
+      saveCfg(stripCfg(Object.assign({},DEFAULT_CONFIG,{cal:cfg().cal},o)));msg.style.color='var(--good)';msg.textContent='Applied.';break;}
+    case 'retro-here':{const tk=sheetCtx&&sheetCtx.task;if(tk)retroSheet(tk);break;}
+    case 'retro-free':retroSheet({taskId:'',title:'Unplanned work',course:'',type:''});break;
+    case 'save-retro':{const r=retroTimes();if(r.err){$('#f-err').textContent=r.err;break;}const tk=sheetCtx.task;
+      put('sessions',uid(),{taskId:tk.taskId||'',title:tk.title,course:tk.course||'',type:tk.type||'',start:r.s,end:r.e,min:r.min,pre:{},post:{},overall:readRates(),retro:true,chunkId:(tk.taskId&&chunkFor(tk.taskId)||{}).id||'',loggedAt:Date.now(),note:$('#f-note').value.trim()});
+      const dn=$('#f-done');if(dn&&dn.checked&&tk.taskId){const t=S.tasks.get(tk.taskId);if(t){put('tasks',tk.taskId,Object.assign({},t,{done:true,doneAt:Date.now()}));releaseBlocks(tk.taskId,'✅ ',true);}}
+      closeSheet();toast('Logged '+fmtMin(r.min)+' of past work');break;}
+    case 'cal-connect':editCfg(c=>{c.cal.on=true;});calRefresh(true);break;
+    case 'cal-off':editCfg(c=>{c.cal.on=false;});CAL.events=[];CAL.at=0;CAL.status='off';CAL.list=null;break;
+    case 'cal-refresh':calRefresh(true);break;
+    case 'cal-list':gcCall('list_calendars',{},true).then(q=>{const nv=cfg().cal.never||[];CAL.list=(q.calendars||[]).filter(x=>x&&x.id&&nv.indexOf(x.id)<0).map(x=>({id:x.id,name:x.summary||x.id}));schedule();},e=>toast(calMsg(e&&e.code)));break;
+    case 'checkup':location.hash='insights';setTimeout(()=>{const x=$('#checkup');if(x)x.scrollIntoView({block:'start'});},200);break;
+    case 'heat-all':heatSel=null;saveHeat();renderAll();break;
+    case 'heat':{const ids=cfg().habits.map(h=>h.id),s=heatSel?heatSel.filter(i=>ids.indexOf(i)>=0):[],hid=b.dataset.id,ix=s.indexOf(hid);
+      if(ix>=0)s.splice(ix,1);else s.push(hid);heatSel=(s.length&&s.length<ids.length)?s:null;saveHeat();renderAll();break;}
+    case 'ex-daily':exportDaily();break;
+    case 'ex-sessions':exportSessions();break;
+    case 'ex-all':exportAll();break;
+    case 'import':$('#import-file').click();break;
+    case 'sign-in':if(needSignIn)needSignIn.signIn().catch(()=>toast('Sign-in did not finish. Try again.'));break;
+    case 'sign-out':if(Platform.account&&Platform.account.signOut)Platform.account.signOut();break;
+    case 'bridge-copy':Platform.bridgeScript().then(s=>copyText(s,'Script copied. Paste it into the Apps Script editor.'),()=>toast('The log is not open yet. Try again in a moment.'));break;
+    case 'bridge-save':{const u=($('#bridge-url').value||'').trim();
+      if(!Platform.bridgeUrlOk(u)){bridgeMsg='That is not a Web app URL. It starts with https://script.google.com/macros/s/ and ends with /exec.';renderBridge();break;}
+      if(!(Platform.bridgeInfo()||{}).hasKey){bridgeMsg='Press "Copy the script" first, and paste that script into Apps Script.';renderBridge();break;}
+      bridgeMsg='';toast('Testing your script…');
+      Platform.bridgeSave(u).then(()=>Platform.bridgeTest()).then(q=>{bridgeMsg='';editCfg(c=>{c.cal.on=true;});CAL.code='';CAL.status='off';
+        toast('Calendar connected through your script: '+((q&&q.calendars)||[]).length+' calendars found.');calRefresh(true);renderAll();},
+        e=>{bridgeMsg=bridgeErr(e);Platform.bridgeSave('').catch(()=>{}).then(()=>renderAll());});break;}
+    case 'bridge-test':Platform.bridgeTest().then(q=>{bridgeMsg='';toast('Working: '+((q&&q.calendars)||[]).length+' calendars reachable.');},e=>{bridgeMsg=bridgeErr(e);renderAll();});break;
+    case 'bridge-remove':if(armed(b,'Tap again to remove')){bridgeMsg='';Platform.bridgeRemove().then(()=>{toast('Removed. The log is back to one-hour access. You can also delete the script at script.google.com.');renderAll();});}break;
+  }
+});
+document.addEventListener('change',e=>{
+  const el=e.target,k=el.dataset?el.dataset.chg:null;
+  if(el.id==='import-file'){importFile(el.files&&el.files[0]);el.value='';return;}
+  if(el.id==='f-est'||el.id==='f-due')bankBox();
+  if(!k)return;
+  const ed=el.closest('.ed'),i=ed?+ed.dataset.i:-1;
+  switch(k){
+    case 'task-done':{const id=el.closest('[data-id]').dataset.id,t=S.tasks.get(id);if(t){put('tasks',id,Object.assign({},t,{done:el.checked,doneAt:el.checked?Date.now():null}));if(el.checked)releaseBlocks(id,'\u2705 ',true);}break;}
+    case 'sleepH':{const d=clone(S.days.get(today())||{}),v=parseFloat(el.value);if(isNum(v)&&v>=0&&v<=24)d.sleepH=v;else delete d.sleepH;put('days',today(),d);break;}
+    case 'sleepQ':{const d=clone(S.days.get(today())||{}),v=parseInt(el.value,10);if(isNum(v))d.sleepQ=v;else delete d.sleepQ;put('days',today(),d);break;}
+    case 'recall':inclRecall=el.checked;try{localStorage.setItem('ssl-recall',inclRecall?'1':'0');}catch(err){}renderAll();break;
+    case 'cal-alert':editCfg(c=>{c.cal.alert=el.checked;});break;
+    case 'cal-ws':editCfg(c=>{c.cal.workStart=Math.max(0,Math.min(23,Number(el.value)||0));});break;
+    case 'cal-we':editCfg(c=>{c.cal.workEnd=Math.max(1,Math.min(24,Number(el.value)||18));});break;
+    case 'cal-ee':editCfg(c=>{c.cal.eveningEnd=Math.max(1,Math.min(24,Number(el.value)||22));});break;
+    case 'cal-mb':editCfg(c=>{c.cal.maxBlock=Math.max(15,Math.min(480,Number(el.value)||120));});break;
+    case 'cal-br':editCfg(c=>{c.cal.breakMin=Math.max(0,Math.min(120,Number(el.value)||0));});break;
+    case 'cal-busy':{const x=(CAL.list||[]).find(y=>y.id===el.value);if(!x)break;
+      editCfg(c=>{c.cal.calendars=c.cal.calendars.filter(y=>y.id!==x.id);if(el.checked)c.cal.calendars.push({id:x.id,name:x.name});});setTimeout(()=>calRefresh(true),300);break;}
+    case 'cal-target':{const x=(CAL.list||[]).find(y=>y.id===el.value);if(!x)break;editCfg(c=>{c.cal.target={id:x.id,name:x.name};});setTimeout(()=>calRefresh(true),300);break;}
+    case 'trend':trendM=el.value;el.blur();renderAll();break;
+    case 'm-name':editCfg(c=>{c.measures[i].name=el.value.trim()||'Scale';});break;
+    case 'm-low':editCfg(c=>{c.measures[i].low=el.value.trim();});break;
+    case 'm-high':editCfg(c=>{c.measures[i].high=el.value.trim();});break;
+    case 'm-ask':editCfg(c=>{c.measures[i].ask=el.value.trim();});break;
+    case 'm-askb':editCfg(c=>{const v=el.value.trim();if(v)c.measures[i].askBefore=v;else delete c.measures[i].askBefore;});break;
+    case 'm-when':editCfg(c=>{const w=new Set(c.measures[i].when||[]);if(el.checked)w.add(el.value);else w.delete(el.value);c.measures[i].when=Array.from(w);});break;
+    case 'h-name':editCfg(c=>{c.habits[i].name=el.value.trim()||'Habit';});break;
+    case 'h-pw':editCfg(c=>{c.habits[i].perWeek=Math.max(1,Math.min(7,parseInt(el.value,10)||7));});break;
+    case 'types':editCfg(c=>{const t=el.value.split(',').map(s=>s.trim()).filter(Boolean);if(t.length)c.taskTypes=Array.from(new Set(t));});break;
+    case 'nudge':editCfg(c=>{c.nudgeHours=Math.max(1,Math.min(24,Number(el.value)||4));});break;
+    case 'ds':editCfg(c=>{c.dayStart=Math.max(0,Math.min(23,parseInt(el.value,10)||0));});break;
+    case 'de':editCfg(c=>{c.dayEnd=Math.max(1,Math.min(24,parseInt(el.value,10)||24));});break;
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet();});
+document.addEventListener('input',e=>{const id=e.target.id,ck=e.target.dataset&&e.target.dataset.ch;
+  if(id==='f-est')estInput();
+  if(id==='c-extra')delete e.target.dataset.auto;
+  if(ck&&sheetCtx&&sheetCtx.chunks){const row=e.target.closest('.chk'),x=row&&sheetCtx.chunks[+row.dataset.i];if(x){if(ck==='min'){x.min=Math.round((parseFloat(e.target.value)||0)*60);if(sheetCtx.chunks.length>1)$('#f-est').value=hrs(sumMin(sheetCtx.chunks));const sm=$('#ch-sum');if(sm)sm.textContent=chSum();bankBox();}else x.goal=e.target.value;}return;}
+  if(id==='f-est'||id==='f-due')bankBox();else if(id==='r-day'||id==='r-from'||id==='r-to')retroDur();});
+setInterval(()=>{if(ready()&&cfg().cal.on&&!document.hidden&&Date.now()-CAL.tried>3e5)calRefresh();},60000); // keep busy time current
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ready()&&cfg().cal.on&&Date.now()-CAL.tried>12e4)calRefresh();});
+setInterval(()=>{if(tab==='today'&&ready())schedule();},60000); // refresh "x min ago" and due markers
+
+/* ---------- Windows taskbar timer: the app sends the session state; the pill draws only the clock ---------- */
+function pillSync(){const a=ready()?active():null;
+  Platform.pill(a?{on:true,start:a.start,pausedAt:a.pausedAt||0,pausedMs:a.pausedMs||0,planMin:a.planMin!=null?a.planMin:null,mode:tmode}:{on:false});}
+async function pillStart(){if(await Platform.pillProbe())pillSync();}
+// Calendar hooks for the platform layer: re-read when the bridge settings arrive or one-hour access was renewed.
+Platform.calendarWanted=()=>ready()&&cfg().cal.on;
+Platform.onCalendarRenewed=()=>calRefresh(true);
+Platform.onBridge=()=>{const b=Platform.bridgeInfo();if(b&&b.on&&ready()&&cfg().cal.on)calRefresh(true);schedule();};
+let pillTick=0;
+setInterval(()=>{if(!ready())return;if(Platform.pillConnected())pillSync();else if(++pillTick%4===0)pillStart();},15000);
+
+if('serviceWorker' in navigator&&(location.protocol==='https:'||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+init();
+})();
+</script>
+</body>
+</html>

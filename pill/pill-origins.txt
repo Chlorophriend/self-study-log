@@ -1,0 +1,3 @@
+# Web addresses (besides localhost) allowed to drive the taskbar timer, one per line.
+https://stedy-productivity-app.web.app
+https://stedy-productivity-app.firebaseapp.com

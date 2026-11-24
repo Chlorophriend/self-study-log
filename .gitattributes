@@ -1,0 +1,4 @@
+# Keep files with Unix line endings everywhere (the app is served from Linux hosting); Windows scripts keep CRLF.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.png binary

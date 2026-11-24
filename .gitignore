@@ -1,0 +1,10 @@
+# Personal log data: never published
+migration/
+
+# Built from pill/TaskbarPill.cs by pill/build.cmd
+pill/*.exe
+
+# Firebase tool cache and logs
+.firebase/
+firebase-debug.log
+firestore-debug.log
