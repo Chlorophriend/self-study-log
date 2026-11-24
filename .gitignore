@@ -4,6 +4,11 @@ migration/
 # Built from pill/TaskbarPill.cs by pill/build.cmd
 pill/*.exe
 
+# Firebase agent skills for AI coding tools: installed locally, not part of the app
+.agents/
+.claude/skills/
+skills-lock.json
+
 # Firebase tool cache and logs
 .firebase/
 firebase-debug.log
