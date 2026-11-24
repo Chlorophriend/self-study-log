@@ -1,5 +1,7 @@
 # Self-Study Log
 
+A vibe-coded app that lets you plan your task around Google Calendar, track your mood and productivity tasks before and after the task to study your productivity-related behavior.
+
 Time your work, rate mood and energy before and after, track habits, plan chunks against your calendar, and see what your own data says about how you work. It runs anywhere a browser runs and depends on no AI service.
 
 ## What is in this folder
